@@ -104,6 +104,22 @@ class Pipeliner {
     return { sent, failed, total: queue.length };
   }
 
+  async regenerateAllCards() {
+    const workouts = this.store.getWorkouts({ limit: 10000 });
+    let ok = 0, failed = 0;
+    for (const w of workouts) {
+      try {
+        await this.generateForWorkoutId(w.id);
+        ok++;
+      } catch (e) {
+        failed++;
+        this.logger.warn(`[pipeline] card regen failed for ${w.id}: ${e.message}`);
+      }
+    }
+    this.logger.log(`[pipeline] card regen complete: ${ok} ok, ${failed} failed`);
+    return { ok, failed, total: workouts.length };
+  }
+
   async runAll({ forceCard = false } = {}) {
     const ids = await this.syncer.runFull({ forceCard });
     // After sync, ensure exercise muscle data is current then build cards for new workouts

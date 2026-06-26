@@ -65,7 +65,6 @@ async function sendCard({ botToken, chatId, cardPath, caption, workout, totalSet
   form.field('chat_id', chatId);
   form.file('photo', path.basename(cardPath), 'image/jpeg', fs.readFileSync(cardPath));
   if (cap) form.field('caption', cap.length > 1024 ? cap.slice(0, 1021) + '...' : cap);
-  form.field('parse_mode', 'HTML');
   const r = await tgRequest(botToken, 'sendPhoto', form);
   if (r.status >= 400) throw new Error(`Telegram sendPhoto ${r.status}: ${r.body}`);
   return true;

@@ -60,6 +60,13 @@ function apiRouter({ store, pipeliner, config }) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  router.post('/regenerate-all', async (req, res) => {
+    try {
+      const result = await pipeliner.regenerateAllCards();
+      res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
   router.post('/telegram/send-all', async (req, res) => {
     try {
       const result = await pipeliner.sendAllToTelegram({ resetSent: !!req.body.resetSent });
