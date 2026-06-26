@@ -11,14 +11,14 @@ Self-hosted mirror, share-card generator & Telegram auto-poster for the [Lyfta](
 
 ## Features
 
-- **Mirror your Lyfta data locally** — syncs all workout history, exercises, and sets into a local SQLite database
-- **Share-card generation** — reproduces Lyfta's body-map muscle overlay locally using `sharp` (gender-aware: male/female body maps, with fallback)
-- **Telegram auto-posting** — automatically sends share cards to your Telegram chat when new workouts sync, with configurable caption templates
-- **Web dashboard** — browse workouts, view exercise/set details, regenerate cards, send to Telegram manually
-- **Bulk history import** — sync your entire Lyfta history and send all past workouts to Telegram in one click
-- **CloudFront exercise catalog** — auto-discovers and caches Lyfta's exercise catalog for muscle-ID mapping
-- **User profile** — fetches your Lyfta profile (gender, weight, name) via `viewProfileGraph` API
-- **Built-in log viewer** — timestamped application logs viewable in the web UI settings
+- **Mirror your Lyfta data locally** - syncs all workout history, exercises, and sets into a local SQLite database
+- **Share-card generation** - reproduces Lyfta's body-map muscle overlay locally using `sharp` (gender-aware: male/female body maps, with fallback)
+- **Telegram auto-posting** - automatically sends share cards to your Telegram chat when new workouts sync, with configurable caption templates
+- **Web dashboard** - browse workouts, view exercise/set details, regenerate cards, send to Telegram manually
+- **Bulk history import** - sync your entire Lyfta history and send all past workouts to Telegram in one click
+- **CloudFront exercise catalog** - auto-discovers and caches Lyfta's exercise catalog for muscle-ID mapping
+- **User profile** - fetches your Lyfta profile (gender, weight, name) via `viewProfileGraph` API
+- **Built-in log viewer** - timestamped application logs viewable in the web UI settings
 
 ## Quick Start
 
@@ -131,18 +131,18 @@ Use these tokens in your Telegram caption template:
                     └──────────────────┘
 ```
 
-- **Caddy** — reverse proxy, handles HTTP on port 80
-- **Express** — web UI + REST API
-- **Sync engine** — mirrors Lyfta API data, discovers CloudFront exercise catalog
-- **Card generator** — composites body-map overlays + stats onto raw workout pictures using `sharp`
-- **Telegram bot** — sends share cards with configurable captions
+- **Caddy** - reverse proxy, handles HTTP on port 80
+- **Express** - web UI + REST API
+- **Sync engine** - mirrors Lyfta API data, discovers CloudFront exercise catalog
+- **Card generator** - composites body-map overlays + stats onto raw workout pictures using `sharp`
+- **Telegram bot** - sends share cards with configurable captions
 
 ## First Run
 
 On first login, the dashboard will show a welcome prompt asking if you'd like to sync your entire Lyfta workout history. You can choose to:
-- **Sync history** — downloads all workouts from Lyfta
-- **Sync & send to Telegram** — downloads all workouts and sends every share card to Telegram
-- **Skip for now** — continue without bulk import
+- **Sync history** - downloads all workouts from Lyfta
+- **Sync & send to Telegram** - downloads all workouts and sends every share card to Telegram
+- **Skip for now** - continue without bulk import
 
 ## Project Structure
 
@@ -186,4 +186,4 @@ app/
 
 ## License
 
-This project is for personal use. Lyfta is a trademark of its respective owners. OpenLyfta is not affiliated with or endorsed by Lyfta.
+This project is for personal use. Lyfta is a trademark of its respective owners. Neither the developer Riley Kivimäki nor OpenLyfta is affiliated with nor endorsed by Lyfta.
