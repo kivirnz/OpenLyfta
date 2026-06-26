@@ -118,17 +118,17 @@ Use these tokens in your Telegram caption template:
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌──────────────┐
-│   Caddy      │────▶│  Express (Node)   │────▶│   SQLite     │
-│  (port 80)   │     │  supervisord      │     │  (better-    │
-│  reverse     │     │  ┌─────────────┐  │     │   sqlite3)   │
-│  proxy       │     │  │ Sync engine  │  │     └──────────────┘
-└─────────────┘     │  │ (Lyfta API)  │  │
-                     │  └─────────────┘  │     ┌──────────────┐
-                     │  ┌─────────────┐  │────▶│  Telegram    │
-                     │  │ Card gen    │  │     │  Bot API     │
-                     │  │ (sharp)     │  │     └──────────────┘
-                     │  └─────────────┘  │
-                     └──────────────────┘
+│   Caddy     │────▶│  Express (Node)  │────▶│   SQLite     │
+│  (port 80)  │     │  supervisord     │     │  (better-    │
+│  reverse    │     │  ┌─────────────┐ │     │   sqlite3)   │
+│  proxy      │     │  │ Sync engine │ │     └──────────────┘
+└─────────────┘     │  │ (Lyfta API) │ │
+                    │  └─────────────┘ │     ┌──────────────┐
+                    │  ┌─────────────┐ │────▶│  Telegram    │
+                    │  │ Card gen    │ │     │  Bot API     │
+                    │  │ (sharp)     │ │     └──────────────┘
+                    │  └─────────────┘ │
+                    └──────────────────┘
 ```
 
 - **Caddy** — reverse proxy, handles HTTP on port 80
