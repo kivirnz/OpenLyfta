@@ -42,7 +42,6 @@ docker run -d \
   -p 80:80 \
   -v /opt/docker/openlyfta/data:/data \
   -v /opt/docker/openlyfta/Caddyfile:/etc/caddy/Caddyfile:ro \
-  --env-file /opt/docker/openlyfta/.env \
   --restart unless-stopped \
   wolfgirl/openlyfta:latest
 ```
@@ -64,8 +63,6 @@ services:
     volumes:
       - /opt/docker/openlyfta/data:/data
       - /opt/docker/openlyfta/Caddyfile:/etc/caddy/Caddyfile:ro
-    env_file:
-      - /opt/docker/openlyfta/.env
 ```
 
 ### Local Development
