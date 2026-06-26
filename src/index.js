@@ -109,11 +109,17 @@ async function main() {
   // --- Protected API routes ---
   app.use('/api', (req, res, next) => authMiddleware(session)(req, res, next), apiRouter({ store, pipeliner, config }));
 
+  // --- Favicon (serve favicon-32.png at /favicon.ico) ---
+  app.get('/favicon.ico', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'favicon-32.png')));
+
   // --- Static files (logos, favicons — NOT the dashboard) ---
   app.use(express.static(PUBLIC_DIR, { index: false }));
 
-  // --- Dashboard (auth required) ---
-  app.get('/', authMiddleware(session), (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
+  // --- Dashboard (auth required, no-cache so new versions are always served) ---
+  app.get('/', authMiddleware(session), (req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  });
 
   // Cron
   let cronTask = null;
