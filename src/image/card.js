@@ -4,7 +4,7 @@ const path = require('node:path');
 const sharp = require('sharp');
 const { muscleById } = require('./muscles');
 
-const LOGO_PATH = path.join(__dirname, '..', '..', 'assets', 'img', 'stickfigure.png');
+const LOGO_PATH = path.join(__dirname, '..', '..', 'assets', 'img', 'transparent.png');
 
 const BODY_DIR = path.join(__dirname, '..', '..', 'assets', 'bodymaps');
 function basePaths(gender) {
@@ -125,8 +125,8 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
   const RED_LIGHT = mix(RED, 0.50);
   const g = validGender(gender);
 
-  // Body figures: 40% smaller than before (18% of image height instead of 30%)
-  const targetBodyHeight = Math.round(PH * 0.18);
+  // Body figures: 18% -> 30% bigger = ~23.4% of image height
+  const targetBodyHeight = Math.round(PH * 0.234);
   const bodyLeft = 36;
   const bodyBottomMargin = 50;
   const bodyTop = PH - targetBodyHeight - bodyBottomMargin;
@@ -140,7 +140,7 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
     frontSm = await sharp(frontScaled).metadata();
   }
 
-  // Stats: compact horizontal row above the body model
+  // Stats: vertical stack above the body model — label then value, centred, with gaps between groups
   const sets = countSets(workout);
   const volume = fmtVolume(workout.total_volume || workout.totalLiftedWeight || 0);
   const durationRaw = (workout.workout_duration || '00:00:00');
@@ -154,32 +154,61 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
     const m = parseInt(parts[0], 10);
     duration = m + ':' + parts[1];
   }
-  const statsH = 64;
+
+  // Label font 30% bigger (26 -> 34), numeric font 20% bigger (26 -> 31)
+  const labelFS = 34;
+  const numFS = 31;
+  const labelLineH = 42;
+  const numLineH = 38;
+  const groupGap = 14;
+
+  // Center of the body block (for text centering and logo placement)
+  const bodyBlockW = frontSm ? (frontSm.width * 2 + 12) : 0;
+  const bodyCenterX = bodyLeft + bodyBlockW / 2;
+
+  const groups = [
+    { label: 'Weight Lifted', value: volume },
+    { label: 'Duration', value: duration },
+    { label: 'Total Sets', value: String(sets) },
+  ];
+
+  let totalH = 0;
+  const groupLayouts = groups.map((g) => {
+    const h = labelLineH + numLineH;
+    const layout = { ...g, startY: totalH, labelY: totalH + labelLineH - 6, valueY: totalH + labelLineH + numLineH - 6 };
+    totalH += h + groupGap;
+    return layout;
+  });
+  totalH -= groupGap;
 
   const statsSvg = Buffer.from(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="${PW}" height="${statsH}">
-      <text x="${bodyLeft}" y="28" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="20" fill="rgba(255,255,255,0.65)" font-weight="500">Weight Lifted</text>
-      <text x="${bodyLeft}" y="56" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="28" fill="#ffffff" font-weight="700">${esc(volume)}</text>
-      <text x="${bodyLeft + 220}" y="28" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="20" fill="rgba(255,255,255,0.65)" font-weight="500">Duration</text>
-      <text x="${bodyLeft + 220}" y="56" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="28" fill="#ffffff" font-weight="700">${esc(duration)}</text>
-      <text x="${bodyLeft + 420}" y="28" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="20" fill="rgba(255,255,255,0.65)" font-weight="500">Total Sets</text>
-      <text x="${bodyLeft + 420}" y="56" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="28" fill="#ffffff" font-weight="700">${esc(String(sets))}</text>
+    <svg xmlns="http://www.w3.org/2000/svg" width="${PW}" height="${totalH}">
+      ${groupLayouts.map((g) => `
+      <text x="${bodyCenterX}" y="${g.labelY}" text-anchor="middle" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="${labelFS}" fill="#ffffff" font-weight="700">${esc(g.label)}</text>
+      <text x="${bodyCenterX}" y="${g.valueY}" text-anchor="middle" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="${numFS}" fill="#ffffff" font-weight="700">${esc(g.value)}</text>`).join('\n')}
     </svg>`);
 
-  const statsTop = bodyTop - statsH - 16;
+  const statsTop = bodyTop - totalH + 4;
 
   const comps = [
     { input: picturePath, blend: 'over' },
   ];
-  // OpenLyfta stickfigure logo watermark (top-right corner)
-  if (fs.existsSync(LOGO_PATH)) {
-    const logoSize = 56;
-    const logo = await sharp(LOGO_PATH).resize(logoSize, logoSize, { fit: 'inside' }).png().toBuffer();
-    comps.push({ input: logo, blend: 'over', left: PW - logoSize - 24, top: 24 });
-  }
   if (frontScaled && backScaled) {
     comps.push({ input: frontScaled, blend: 'over', left: bodyLeft, top: bodyTop });
     comps.push({ input: backScaled, blend: 'over', left: bodyLeft + frontSm.width + 12, top: bodyTop });
+  } else if (frontScaled) {
+    comps.push({ input: frontScaled, blend: 'over', left: bodyLeft, top: bodyTop });
+  }
+  // OpenLyfta logo centered between the two body models, at the very bottom
+  if (fs.existsSync(LOGO_PATH)) {
+    const logoMeta = await sharp(LOGO_PATH).metadata();
+    const logoMaxW = 200;
+    const logoScale = Math.min(1, logoMaxW / logoMeta.width);
+    const logoW = Math.round(logoMeta.width * logoScale);
+    const logoH = Math.round(logoMeta.height * logoScale);
+    const logo = await sharp(LOGO_PATH).resize(logoW, logoH, { fit: 'inside' }).png().toBuffer();
+    const logoLeft = Math.round(bodyCenterX - logoW / 2);
+    comps.push({ input: logo, blend: 'over', left: Math.max(0, logoLeft), top: PH - logoH - 12 });
   }
   comps.push(
     { input: statsSvg, blend: 'over', left: 0, top: statsTop },
