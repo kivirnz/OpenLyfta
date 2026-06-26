@@ -25,6 +25,12 @@ class Syncer {
       const saved = this.store.getDevice(this.client.userId, this.client.device_id);
       if (saved && saved.auth_token === this.client.authToken) return;
     }
+    // Re-read credentials from store on each login (dashboard settings may change after boot)
+    const email = this.store.setting('lyfta_email') || this.client.email;
+    const password = this.store.setting('lyfta_password') || this.client.password;
+    this.client.email = email;
+    this.client.password = password;
+    if (!email || !password) throw new Error('Lyfta credentials not configured. Set email and password in Settings.');
     const data = await this.client.login();
     this.store.saveDevice({ user_id: data.id, device_id: this.client.device_id, device_type: this.client.device_type, auth_token: data.auth_token });
     this.logger.log(`[sync] logged in as user ${data.id}`);
