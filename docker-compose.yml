@@ -1,0 +1,12 @@
+services:
+  openlyfta:
+    image: openlyfta/openlyfta:latest
+    container_name: openlyfta
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - /opt/docker/openlyfta/data:/data
+      - /opt/docker/openlyfta/Caddyfile:/etc/caddy/Caddyfile:ro
+    env_file:
+      - /opt/docker/openlyfta/.env

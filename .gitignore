@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Runtime data (SQLite DB, downloaded media, generated cards, cached catalogs)
+data/
+
+# Environment / secrets
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker
+.docker/

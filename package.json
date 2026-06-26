@@ -1,0 +1,30 @@
+{
+  "name": "openlyfta",
+  "version": "1.0.0",
+  "description": "Self-hosted mirror & share-card generator for the Lyfta workout tracker API",
+  "private": true,
+  "main": "src/index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.0",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "sharp": "^0.33.5"
+  },
+  "optionalDependencies": {
+    "p-limit": "^6.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.10.0"
+  }
+}
