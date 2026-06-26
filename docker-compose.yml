@@ -8,5 +8,4 @@ services:
     volumes:
       - /opt/docker/openlyfta/data:/data
       - /opt/docker/openlyfta/Caddyfile:/etc/caddy/Caddyfile:ro
-    env_file:
-      - /opt/docker/openlyfta/.env
+    
