@@ -38,8 +38,8 @@ cp Caddyfile /opt/docker/openlyfta/Caddyfile
 # 3. Edit .env with your Lyfta credentials and admin password
 nano /opt/docker/openlyfta/.env
 
-# 4. Build and run
-docker build -t openlyfta/openlyfta:latest .
+# 4. Pull and run
+docker pull wolfgirl/openlyfta:latest
 docker run -d \
   --name openlyfta \
   -p 80:80 \
@@ -47,7 +47,7 @@ docker run -d \
   -v /opt/docker/openlyfta/Caddyfile:/etc/caddy/Caddyfile:ro \
   --env-file /opt/docker/openlyfta/.env \
   --restart unless-stopped \
-  openlyfta/openlyfta:latest
+  wolfgirl/openlyfta:latest
 ```
 
 Then open `http://localhost` in your browser and log in with your admin password.
@@ -59,7 +59,7 @@ Use the included `docker-compose.yml`. In Portainer, create a new stack and past
 ```yaml
 services:
   openlyfta:
-    image: openlyfta/openlyfta:latest
+    image: wolfgirl/openlyfta:latest
     container_name: openlyfta
     restart: unless-stopped
     ports:

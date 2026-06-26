@@ -1,6 +1,6 @@
 services:
   openlyfta:
-    image: openlyfta/openlyfta:latest
+    image: wolfgirl/openlyfta:latest
     container_name: openlyfta
     restart: unless-stopped
     ports:
