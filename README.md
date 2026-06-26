@@ -4,7 +4,7 @@
 
 # OpenLyfta
 
-<img src="assets/img/logo_text.png" width="220" alt="OpenLyfta">
+<img src="assets/img/logo_text.png" width="220" height="120" alt="OpenLyfta">
 
 Self-hosted mirror, share-card generator & Telegram auto-poster for the [Lyfta](https://lyfta.app) workout tracker.
 
