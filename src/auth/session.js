@@ -14,11 +14,14 @@ function makeSession(store) {
     login(password) {
       const target = pw();
       if (!target) {
-        // first-run: install the provided password
-        if (password && password.length >= 6) { store.setting('admin_password', password); return true; }
-        return false;
+        // first-run: install the provided password, then create a session
+        if (password && password.length >= 6) { store.setting('admin_password', password); }
+        else { return false; }
+      } else {
+        const a = Buffer.from(String(password));
+        const b = Buffer.from(String(target));
+        if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
       }
-      if (!password || !crypto.timingSafeEqual(Buffer.from(String(password)), Buffer.from(String(target)))) return false;
       const sid = crypto.randomBytes(24).toString('hex');
       TOKENS.set(sid, Date.now() + 1000 * 60 * 60 * 12);
       return sid;
@@ -42,13 +45,14 @@ function middleware(session) {
 }
 
 const LOGIN_HTML = `<!doctype html><meta charset=utf-8><title>OpenLyfta · login</title>
+<link rel=icon type=image/png href=/stickfigure.png>
 <style>body{font-family:system-ui,sans-serif;background:#111317;color:#e9eaef;display:grid;place-items:center;height:100vh;margin:0}
 .box{background:#191c23;padding:2.2rem;border-radius:16px;width:340px;box-shadow:0 4px 30px rgba(0,0,0,.3)}
 h1{margin:0 0 1.4rem;font-size:1.3rem;font-weight:600}
 input{width:100%;box-sizing:border-box;padding:.7rem;border:1px solid #2a2e38;border-radius:9px;background:#0e0f13;color:#eee;margin-bottom:.8rem}
 button{width:100%;padding:.8rem;border:0;border-radius:9px;background:#EB445A;color:#fff;font-weight:600;cursor:pointer}
 .hint{color:#7d818c;font-size:.8rem;margin-top:1rem;text-align:center}
-</style><div class=box><h1>OpenLyfta</h1><form id=f><input type=password id=p placeholder=admin password><button>Sign in</button></form><div class=hint id=h></div></div>
-<script>form.onsubmit=async e=>{e.preventDefault();const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p.value})});if(r.ok){location='/'}else{h.textContent='Wrong password';h.style.color='#EB445A'}}</script>`;
+</style><div class=box><h1>OpenLyfta</h1><form id=f><input type=password id=p placeholder="admin password"><button>Sign in</button></form><div class=hint id=h></div></div>
+<script>document.getElementById('f').onsubmit=async function(e){e.preventDefault();var pw=document.getElementById('p').value;var hint=document.getElementById('h');try{var r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});if(r.ok){window.location.href='/';}else{hint.textContent='Wrong password';hint.style.color='#EB445A';}}catch(err){hint.textContent='Error: '+err;hint.style.color='#EB445A';}}</script>`;
 
 module.exports = { makeSession, middleware };

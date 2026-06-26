@@ -45,7 +45,7 @@ input,textarea{width:100%;padding:.6rem;border-radius:9px;border:1px solid var(-
 <div style="display:flex;gap:.6rem;align-items:center">
 <button class=btn id=settingsBtn>⚙ Settings</button>
 <button class=btn id=syncBtn>↻ Sync now</button>
-<a class=btn href=/api/logout>Sign out</a></div></header>
+<button class=btn id=logoutBtn>Sign out</button></div></header>
 <div class=wrap>
 <div id=onboardBox></div>
 <div class=stats id=stats></div>
@@ -124,6 +124,7 @@ async function view(id, src){
 async function regen(id){try{await api('/api/workouts/'+id+'/regenerate-card',{method:'POST'});load()}catch(e){alert(e.message)}}
 async function sendtg(id){try{await api('/api/workouts/'+id+'/send-telegram',{method:'POST'});load()}catch(e){alert(e.message)}}
 $('#syncBtn').onclick=async()=>{const b=$('#syncBtn');b.textContent='Syncing…';try{const r=await api('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});b.textContent='↻ Sync now';alert('Synced '+r.synced+' workouts')}catch(e){b.textContent='↻ Sync now';alert(e.message)};load()};
+$('#logoutBtn').onclick=async()=>{await fetch('/api/logout',{method:'POST'});window.location.href='/login';};
 $('#sendAllTgBtn').onclick=async()=>{
   if(!confirm('Send ALL workouts to Telegram? This will send every workout with a picture ('+await api('/api/stats').then(s=>s.workouts)+' total).'))return;
   const b=$('#sendAllTgBtn');b.textContent='Sending…';b.disabled=true;

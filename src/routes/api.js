@@ -1,17 +1,8 @@
 'use strict';
 const { renderTemplate } = require('../telegram/bot');
 
-function apiRouter({ store, pipeliner, config, logger: _logger = console }) {
+function apiRouter({ store, pipeliner, config }) {
   const router = require('express').Router();
-
-  router.post('/login', (req, res) => {
-    const { password } = req.body || {};
-    const sid = req.session.login(password || '');
-    if (!sid) return res.status(401).json({ error: 'invalid' });
-    res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', maxAge: 1000 * 60 * 60 * 12 });
-    res.json({ ok: true });
-  });
-  router.post('/logout', (req, res) => { req.session.logout(req.sessionId); res.clearCookie('sid'); res.json({ ok: true }); });
 
   router.get('/me', (req, res) => res.json({ ok: true, user: 'admin' }));
 

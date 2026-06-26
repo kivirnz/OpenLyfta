@@ -46,23 +46,33 @@ async function main() {
   app.use(express.json({ limit: '2mb' }));
   app.use(cookieParser());
 
-  // API routes that handle their own auth (login)
-  app.use('/api/login', express.raw({ type: '*/*' }));
-  app.post('/api/login', express.json(), (req, res) => {
+  // --- Auth routes (no auth required) ---
+  app.post('/api/login', (req, res) => {
     const sid = session.login((req.body || {}).password || '');
     if (!sid) return res.status(401).json({ error: 'invalid' });
     res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', maxAge: 1000 * 60 * 60 * 12 });
     res.json({ ok: true });
   });
 
-  // Everything under /api/* (except login) and dashboard requires auth
-  app.use('/api', (req, res, next) => {
-    if (req.path === '/login') return next();
-    authMiddleware(session)(req, res, next);
-  }, apiRouter({ store, pipeliner, config, logger }));
+  app.post('/api/logout', (req, res) => {
+    session.logout(req.cookies && req.cookies.sid);
+    res.clearCookie('sid');
+    res.json({ ok: true });
+  });
 
-  // Public static + dashboard
-  app.use(express.static(PUBLIC_DIR));
+  app.get('/login', (req, res) => {
+    const sid = (req.cookies && req.cookies.sid) || null;
+    if (session.isAuthed(sid)) return res.redirect('/');
+    res.type('html').status(200).send(LOGIN_PAGE);
+  });
+
+  // --- Protected API routes ---
+  app.use('/api', (req, res, next) => authMiddleware(session)(req, res, next), apiRouter({ store, pipeliner, config, logger }));
+
+  // --- Static files (public assets like logos, favicons — NOT the dashboard) ---
+  app.use(express.static(PUBLIC_DIR, { index: false }));
+
+  // --- Dashboard (auth required) ---
   app.get('/', authMiddleware(session), (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 
   // Cron-driven full pipeline
@@ -93,5 +103,16 @@ async function main() {
     setTimeout(() => pipeliner.runAll().catch((e) => logger.warn('[boot] initial sync failed:', e.message)), 3500);
   }
 }
+
+const LOGIN_PAGE = `<!doctype html><meta charset=utf-8><title>OpenLyfta · login</title>
+<link rel=icon type=image/png href=/stickfigure.png>
+<style>body{font-family:system-ui,sans-serif;background:#111317;color:#e9eaef;display:grid;place-items:center;height:100vh;margin:0}
+.box{background:#191c23;padding:2.2rem;border-radius:16px;width:340px;box-shadow:0 4px 30px rgba(0,0,0,.3)}
+h1{margin:0 0 1.4rem;font-size:1.3rem;font-weight:600}
+input{width:100%;box-sizing:border-box;padding:.7rem;border:1px solid #2a2e38;border-radius:9px;background:#0e0f13;color:#eee;margin-bottom:.8rem}
+button{width:100%;padding:.8rem;border:0;border-radius:9px;background:#EB445A;color:#fff;font-weight:600;cursor:pointer}
+.hint{color:#7d818c;font-size:.8rem;margin-top:1rem;text-align:center}
+</style><div class=box><h1>OpenLyfta</h1><form id=f><input type=password id=p placeholder="admin password"><button>Sign in</button></form><div class=hint id=h></div></div>
+<script>document.getElementById('f').onsubmit=async function(e){e.preventDefault();var pw=document.getElementById('p').value;var hint=document.getElementById('h');try{var r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});if(r.ok){window.location.href='/';}else{hint.textContent='Wrong password';hint.style.color='#EB445A';}}catch(err){hint.textContent='Error: '+err;hint.style.color='#EB445A';}}</script>`;
 
 main().catch((e) => { console.error(e); process.exit(1); });
