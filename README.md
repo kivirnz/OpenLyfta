@@ -1,9 +1,6 @@
 <div align="center">
 
 <img src="assets/img/stickfigure.png" width="120" height="120" alt="OpenLyfta">
-
-# OpenLyfta
-
 <img src="assets/img/logo_text.png" width="220" height="120" alt="OpenLyfta">
 
 Self-hosted mirror, share-card generator & Telegram auto-poster for the [Lyfta](https://lyfta.app) workout tracker.
