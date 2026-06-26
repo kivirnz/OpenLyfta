@@ -79,7 +79,7 @@ function apiRouter({ store, pipeliner, config }) {
   }));
   router.post('/settings', (req, res) => {
     const body = req.body || {};
-    for (const k of ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled', 'telegram_caption', 'sync_cron', 'lyfta_email', 'lyfta_device_id']) {
+    for (const k of ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled', 'telegram_caption', 'sync_cron', 'lyfta_email', 'lyfta_device_id', 'lyfta_password']) {
       if (body[k] !== undefined) store.setting(k, String(body[k]));
     }
     res.json({ ok: true });

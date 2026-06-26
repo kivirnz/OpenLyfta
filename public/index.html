@@ -3,7 +3,7 @@
 <link rel=apple-touch-icon href=/apple-touch-icon.png>
 <title>OpenLyfta · Dashboard</title>
 <style>
-:root{--bg:#111317;--card:#191c23;--line:#262a34;--muted:#8a8e9b;--acc:#EB445A;--ok:#3ddc84;--t:#e9eaef}
+:root{--bg:#111317;--card:#191c23;--line:#262a34;--muted:#8a8e9b;--acc:#EB445A;--ok:#3ddc84;--err:#ff6b6b;--t:#e9eaef}
 *{box-sizing:border-box}body{margin:0;font-family:'Google Sans',system-ui,sans-serif;background:var(--bg);color:var(--t)}
 header{padding:.8rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
 .header-left{display:flex;align-items:center;gap:.7rem}
@@ -32,163 +32,257 @@ header{padding:.8rem 1.5rem;display:flex;align-items:center;justify-content:spac
 dialog{background:var(--card);color:var(--t);border:1px solid var(--line);border-radius:14px;padding:1.5rem;width:min(720px,94vw)}
 label{display:block;margin:.8rem 0 .25rem;font-size:.82rem;color:var(--muted)}
 input,textarea{width:100%;padding:.6rem;border-radius:9px;border:1px solid var(--line);background:#0e0f13;color:#eee;font:inherit;box-sizing:border-box}
-.row{display:flex;gap:.7rem}.row>*{flex:1}
-.modalimg{width:100%;border-radius:12px}
 .tag{font-size:.7rem;color:var(--muted)}a{color:var(--acc)}
+.modalimg{width:100%;border-radius:12px}
 .cardrepos{display:flex;gap:1rem;flex-wrap:wrap}
 .cardrepos img{max-height:80vh;border-radius:10px}
 .onboard{background:var(--card);border:1px solid var(--acc);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;text-align:center}
 .onboard h2{margin:0 0 .5rem}
 .onboard p{color:var(--muted);margin:0 0 1rem}
+.error-box{background:rgba(255,107,107,.1);border:1px solid var(--err);border-radius:10px;padding:1rem;margin-bottom:1.5rem;color:var(--err)}
 </style>
-<header><div class=header-left><img class=header-logo src=/stickfigure.png alt="OpenLyfta"><img class=header-text src=/logo_text.png alt="OpenLyfta"></div>
+<header>
+<div class="header-left"><img class="header-logo" src="/stickfigure.png" alt="OpenLyfta"><img class="header-text" src="/logo_text.png" alt="OpenLyfta"></div>
 <div style="display:flex;gap:.6rem;align-items:center">
-<button class=btn id=settingsBtn>⚙ Settings</button>
-<button class=btn id=syncBtn>↻ Sync now</button>
-<button class=btn id=logoutBtn>Sign out</button></div></header>
-<div class=wrap>
-<div id=onboardBox></div>
-<div class=stats id=stats></div>
-<div class=toolbar><button class=btn id=sendAllTgBtn>Send all to Telegram</button><span class=tag id=sendAllTgStatus></span></div>
-<div class=grid id=grid></div>
+<button class="btn" id="settingsBtn">⚙ Settings</button>
+<button class="btn" id="syncBtn">↻ Sync now</button>
+<a class="btn" href="/logout" style="text-decoration:none">Sign out</a>
 </div>
-<dialog id=dlg><div id=dlgBody></div></dialog>
+</header>
+<div class="wrap">
+<div id="errorBox"></div>
+<div id="onboardBox"></div>
+<div class="stats" id="stats"></div>
+<div class="toolbar"><button class="btn" id="sendAllTgBtn">Send all to Telegram</button><span class="tag" id="sendAllTgStatus"></span></div>
+<div class="grid" id="grid"></div>
+</div>
+<dialog id="dlg"><div id="dlgBody"></div></dialog>
 
 <script>
-const $=s=>document.querySelector(s);
-function fmt(d){return (d||'').replace('T',' ').slice(0,16)}
-async function api(p,o){const r=await fetch(p,o||{});if(!r.ok){throw new Error(await r.text())}return r.json()}
-function stat(n,l){return `<div class=stat><span class=v>${n}</span><span class=l>${l}</span></div>`}
-async function load(){
-  const [st,list,profile]=await Promise.all([api('/api/stats'),api('/api/workouts?limit=60'),api('/api/profile').catch(()=>({profile:null}))]);
-  $('#stats').innerHTML=stat(st.workouts,'workouts')+stat(st.exercises,'exercises')+stat(st.sets,'sets');
-  // First-run onboarding: show history sync prompt if Lyfta is configured but no workouts yet
-  const onboardBox=$('#onboardBox');
-  if(st.workouts===0 && profile && profile.profile){
-    onboardBox.innerHTML=`<div class=onboard>
-      <h2>Welcome to OpenLyfta!</h2>
-      <p>You're connected to Lyfta as <b>${profile.profile.first||''} ${profile.profile.last||''}</b>.<br>
-      Would you like to sync your entire Lyfta workout history into OpenLyfta?</p>
-      <div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap">
-        <button class="btn acc" id=onboardSync>Sync history</button>
-        <button class="btn acc" id=onboardSyncSend>Sync & send to Telegram</button>
-        <button class="btn" id=onboardDismiss>Skip for now</button>
-      </div></div>`;
-    document.getElementById('onboardSync').onclick=async()=>{
-      const b=document.getElementById('onboardSync');
-      b.textContent='Syncing…';b.disabled=true;
-      try{const r=await api('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({forceCard:true})});
-        onboardBox.innerHTML='';load();}
-      catch(e){b.textContent='Sync history';b.disabled=false;alert(e.message)}
-    };
-    document.getElementById('onboardSyncSend').onclick=async()=>{
-      const b=document.getElementById('onboardSyncSend');
-      b.textContent='Syncing…';b.disabled=true;
-      try{
-        const r=await api('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({forceCard:true})});
-        b.textContent='Sending to Telegram…';
-        const r2=await api('/api/telegram/send-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resetSent:true})});
-        onboardBox.innerHTML='';load();
-      }catch(e){b.textContent='Sync & send to Telegram';b.disabled=false;alert(e.message)}
-    };
-    document.getElementById('onboardDismiss').onclick=()=>{onboardBox.innerHTML='';};
-  } else {
-    onboardBox.innerHTML='';
-  }
-  $('#grid').innerHTML=list.items.map(w=>{
-    const pic=w.card_path?`/api/workouts/${w.id}/card.jpg`:`/api/workouts/${w.id}/picture.jpg`;
-    return `<div class=workout>
-      <div class=pic style=background-image:url(${pic}) data-id=${w.id} data-src=${pic}></div>
-      <div class=meta>
-        <h3 class=title>${w.title||'Untitled'}</h3>
-        <p class=sub>#${w.workout_number||''} · ${fmt(w.workout_perform_date)} · ${w.workout_duration||''}</p>
-        <div class=chips><span class=chip acc>${(w.total_volume||0).toLocaleString()} kg</span>
-        <span class=chip>${w.workoutType||''}</span>${w.telegram_sent?'<span class=chip sent>Telegram sent ✓</span>':''}</div>
-        <div class=btns>
-          <button class=btn onclick=regen(${w.id})>↻ Card</button>
-          <button class=btn onclick=sendtg(${w.id})>▶ Telegram</button>
-          <button class=btn onclick=view(${w.id})>View</button>
-        </div></div></div>`}).join('');
-  document.querySelectorAll('.pic').forEach(p=>p.onclick=()=>view(+p.dataset.id, p.dataset.src));
-}
-async function view(id, src){
-  const w=await api('/api/workouts/'+id);
-  const exhtml=(w.exercises||[]).map(e=>`<li><b>${e.excercise_name}</b> <span class=tag>${e.exercise_type}</span>${e.exercise_note?`<br><span class=tag>📝 ${e.exercise_note}</span>`:''}
-    <ul>${(e.sets||[]).map(s=>`<li>${s.weight?`<b>${s.weight}kg</b> · `:''}${s.reps?`${s.reps} reps`:''}${s.duration?`${s.duration}`:''}${s.record_value?` <span class=tag>🏆 ${s.record_value}</span>`:''}</li>`).join('')}</ul></li>`).join('');
-  $('#dlgBody').innerHTML=`<div class=cardrepos><img class=modalimg src=src||/api/workouts/${id}/card.jpg style=max-width:46%"></div>
-    <h3>${w.title}</h3><p class=tag>#${w.workout_number} · ${fmt(w.workout_perform_date)}</p>
-    <ul>${exhtml}</ul>
-    <div style="text-align:right;margin-top:1rem"><button class=btn onclick="$('#dlg').close()">Close</button></div>`;
-  $('#dlg').showModal();
-}
-async function regen(id){try{await api('/api/workouts/'+id+'/regenerate-card',{method:'POST'});load()}catch(e){alert(e.message)}}
-async function sendtg(id){try{await api('/api/workouts/'+id+'/send-telegram',{method:'POST'});load()}catch(e){alert(e.message)}}
-$('#syncBtn').onclick=async()=>{const b=$('#syncBtn');b.textContent='Syncing…';try{const r=await api('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});b.textContent='↻ Sync now';alert('Synced '+r.synced+' workouts')}catch(e){b.textContent='↻ Sync now';alert(e.message)};load()};
-$('#logoutBtn').onclick=async()=>{await fetch('/api/logout',{method:'POST'});window.location.href='/login';};
-$('#sendAllTgBtn').onclick=async()=>{
-  if(!confirm('Send ALL workouts to Telegram? This will send every workout with a picture ('+await api('/api/stats').then(s=>s.workouts)+' total).'))return;
-  const b=$('#sendAllTgBtn');b.textContent='Sending…';b.disabled=true;
-  const st=$('#sendAllTgStatus');
-  try{
-    const r=await api('/api/telegram/send-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resetSent:true})});
-    st.textContent='✓ '+r.sent+' sent, '+r.failed+' failed';
-    b.textContent='Send all to Telegram';b.disabled=false;
-    setTimeout(()=>st.textContent='',10000);
-    load();
-  }catch(e){b.textContent='Send all to Telegram';b.disabled=false;alert(e.message)}
-};
+const $=function(s){return document.querySelector(s)};
 
-const SETTINGS_HTML=`<h3>Settings</h3>
-<label>Lyfta email</label><input id=se_email>
-<label>Lyfta device id</label><input id=se_device placeholder="e.g. samsung, SM-A127F, 13">
-<hr style="border-color:var(--line);margin:1.2rem 0">
-<label>Telegram bot token</label><input id=se_tg_token type=password>
-<label>Telegram chat id</label><input id=se_tg_chat>
-<label>Send new workouts to Telegram automatically</label><input id=se_tg_enabled type=checkbox>
-<label>Caption template</label><textarea id=se_caption rows=6></textarea>
-<p class=tag>Tokens: &lt;date&gt; &lt;workoutname&gt; &lt;duration&gt; &lt;volume&gt; &lt;volumeformatted&gt; &lt;totalsets&gt; &lt;exercises&gt; &lt;workoutnumber&gt; &lt;calories&gt; &lt;bodyweight&gt;</p>
-<label>Sync schedule (cron)</label><input id=se_cron>
-<div style="display:flex;gap:.5rem;margin-top:1rem"><button class=btn acc onclick=saveSettings()>Save</button><button class=btn onclick=testTg()>Test →</button><button class=btn onclick="$('#dlg').close()">Close</button></div>
-<hr style="border-color:var(--line);margin:1.2rem 0">
-<h3 style="margin-bottom:.5rem">Logs</h3>
-<div style="display:flex;gap:.5rem;margin-bottom:.8rem"><button class=btn onclick=refreshLogs()>↻ Refresh</button><button class=btn onclick=clearLogs()>Clear</button></div>
-<div id=logBox style="max-height:300px;overflow-y:auto;background:#0e0f13;border:1px solid var(--line);border-radius:9px;padding:.6rem;font-family:monospace;font-size:.76rem;line-height:1.5"></div>`;
-$('#settingsBtn').onclick=async()=>{
-  $('#dlgBody').innerHTML=SETTINGS_HTML;
-  const s=await api('/api/settings');
-  $('#se_email').value=s.lyfta_email||'';
-  $('#se_device').value=s.lyfta_device_id||'';
-  $('#se_tg_token').value=s.telegram_bot_token||'';
-  $('#se_tg_chat').value=s.telegram_chat_id||'';
-  $('#se_tg_enabled').checked=s.telegram_enabled==='1';
-  $('#se_caption').value=s.telegram_caption||'';
-  $('#se_cron').value=s.sync_cron||'';
-  refreshLogs();
-  $('#dlg').showModal();
-};
-async function saveSettings(){
-  await api('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-    lyfta_email:$('#se_email').value, lyfta_device_id:$('#se_device').value,
-    telegram_bot_token:$('#se_tg_token').value, telegram_chat_id:$('#se_tg_chat').value,
-    telegram_enabled:$('#se_tg_enabled').checked?'1':'0', telegram_caption:$('#se_caption').value,
-    sync_cron:$('#se_cron').value})});
-  alert('Saved ✓');}
-async function testTg(){try{await api('/api/test-telegram',{method:'POST'});alert('Sent ✓')}catch(e){alert(e.message)}}
-async function refreshLogs(){
-  try{
-    const r=await api('/api/logs?limit=200');
-    const box=document.getElementById('logBox');
-    if(!box)return;
-    if(!r.items.length){box.innerHTML='<span style="color:var(--muted)">No logs yet</span>';return}
-    box.innerHTML=r.items.map(l=>{
-      const d=new Date(l.ts);
-      const ts=d.toLocaleTimeString()+'.'+String(d.getMilliseconds()).padStart(3,'0');
-      const color=l.level==='error'?'#ff6b6b':l.level==='warn'?'#ffd93d':'#a0e7a0';
-      return `<div><span style="color:${color}">[${l.level.toUpperCase()}]</span> <span style="color:var(--muted)">${ts}</span> ${l.message.replace(/</g,'&lt;')}</div>`;
-    }).join('');
-    box.scrollTop=box.scrollHeight;
-  }catch(e){}
+async function api(p,o){
+  var r=await fetch(p,o||{});
+  if(!r.ok){
+    var msg=await r.text().catch(function(){return 'Error '+r.status});
+    throw new Error(msg);
+  }
+  return r.json();
 }
-async function clearLogs(){try{await api('/api/logs/clear',{method:'POST'});refreshLogs()}catch(e){alert(e.message)}}
-load();
+function fmt(d){return (d||'').replace('T',' ').slice(0,16);}
+function stat(n,l){return '<div class="stat"><span class="v">'+n+'</span><span class="l">'+l+'</span></div>';}
+function showError(msg){$('#errorBox').innerHTML='<div class="error-box">'+msg+'</div>';}
+function clearError(){$('#errorBox').innerHTML='';}
+
+async function load(){
+  clearError();
+  $('#stats').innerHTML='Loading…';
+  $('#grid').innerHTML='';
+  try{
+    var st=await api('/api/stats');
+    var list=await api('/api/workouts?limit=60');
+    var profileRes=await api('/api/profile').catch(function(){return{profile:null}});
+    var profile=profileRes.profile;
+
+    $('#stats').innerHTML=stat(st.workouts,'workouts')+stat(st.exercises,'exercises')+stat(st.sets,'sets');
+
+    // First-run onboarding
+    var onboardBox=$('#onboardBox');
+    if(st.workouts===0 && profile){
+      onboardBox.innerHTML='<div class="onboard">'
+        +'<h2>Welcome to OpenLyfta!</h2>'
+        +'<p>You\'re connected to Lyfta as <b>'+((profile.first||'')+' '+(profile.last||''))+'</b>.<br>'
+        +'Would you like to sync your entire Lyfta workout history into OpenLyfta?</p>'
+        +'<div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap">'
+        +'<button class="btn acc" id="onboardSync">Sync history</button>'
+        +'<button class="btn acc" id="onboardSyncSend">Sync &amp; send to Telegram</button>'
+        +'<button class="btn" id="onboardDismiss">Skip for now</button>'
+        +'</div></div>';
+      document.getElementById('onboardSync').onclick=function(){
+        var b=this;b.textContent='Syncing…';b.disabled=true;
+        api('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({forceCard:true})})
+        .then(function(){onboardBox.innerHTML='';load();})
+        .catch(function(e){b.textContent='Sync history';b.disabled=false;showError(e.message);});
+      };
+      document.getElementById('onboardSyncSend').onclick=function(){
+        var b=this;b.textContent='Syncing…';b.disabled=true;
+        api('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({forceCard:true})})
+        .then(function(){b.textContent='Sending to Telegram…';return api('/api/telegram/send-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resetSent:true})});})
+        .then(function(){onboardBox.innerHTML='';load();})
+        .catch(function(e){b.textContent='Sync & send to Telegram';b.disabled=false;showError(e.message);});
+      };
+      document.getElementById('onboardDismiss').onclick=function(){onboardBox.innerHTML='';};
+    } else {
+      onboardBox.innerHTML='';
+    }
+
+    var html=list.items.map(function(w){
+      var pic=w.card_path?('/api/workouts/'+w.id+'/card.jpg'):('/api/workouts/'+w.id+'/picture.jpg');
+      return '<div class="workout">'
+        +'<div class="pic" style="background-image:url('+pic+')" data-id="'+w.id+'" data-src="'+pic+'"></div>'
+        +'<div class="meta">'
+        +'<h3 class="title">'+(w.title||'Untitled')+'</h3>'
+        +'<p class="sub">#'+(w.workout_number||'')+' · '+fmt(w.workout_perform_date)+' · '+(w.workout_duration||'')+'</p>'
+        +'<div class="chips"><span class="chip acc">'+(w.total_volume||0).toLocaleString()+' kg</span>'
+        +'<span class="chip">'+(w.workoutType||'')+'</span>'
+        +(w.telegram_sent?'<span class="chip" style="color:var(--ok)">Telegram sent ✓</span>':'')
+        +'</div>'
+        +'<div class="btns">'
+        +'<button class="btn" onclick="regen('+w.id+')">↻ Card</button>'
+        +'<button class="btn" onclick="sendtg('+w.id+')">▶ Telegram</button>'
+        +'<button class="btn" onclick="view('+w.id+')">View</button>'
+        +'</div></div></div>';
+    }).join('');
+    $('#grid').innerHTML=html;
+
+    var pics=document.querySelectorAll('.pic');
+    for(var i=0;i<pics.length;i++){
+      pics[i].onclick=function(){view(+this.dataset.id, this.dataset.src);};
+    }
+  } catch(e){
+    showError('Failed to load: '+e.message);
+    $('#stats').innerHTML='';
+    $('#grid').innerHTML='';
+  }
+}
+
+async function view(id, src){
+  try{
+    var w=await api('/api/workouts/'+id);
+    var exhtml=(w.exercises||[]).map(function(e){
+      var setsHtml=(e.sets||[]).map(function(s){
+        return '<li>'+(s.weight?'<b>'+s.weight+'kg</b> · ':'')+(s.reps?s.reps+' reps':'')+(s.duration?s.duration:'')+(s.record_value?' <span class="tag">🏆 '+s.record_value+'</span>':'')+'</li>';
+      }).join('');
+      return '<li><b>'+e.excercise_name+'</b> <span class="tag">'+(e.exercise_type||'')+'</span>'
+        +(e.exercise_note?'<br><span class="tag">📝 '+e.exercise_note+'</span>':'')
+        +'<ul>'+setsHtml+'</ul></li>';
+    }).join('');
+
+    var imgSrc=src||('/api/workouts/'+id+'/card.jpg');
+    $('#dlgBody').innerHTML='<div class="cardrepos"><img class="modalimg" src="'+imgSrc+'" style="max-width:46%"></div>'
+      +'<h3>'+w.title+'</h3><p class="tag">#'+w.workout_number+' · '+fmt(w.workout_perform_date)+'</p>'
+      +'<ul>'+exhtml+'</ul>'
+      +'<div style="text-align:right;margin-top:1rem"><button class="btn" onclick="closeDlg()">Close</button></div>';
+    $('#dlg').showModal();
+  } catch(e){
+    showError('Failed to load workout: '+e.message);
+  }
+}
+
+function closeDlg(){
+  var d=$('#dlg');
+  if(d.open)d.close();
+}
+
+async function regen(id){
+  try{await api('/api/workouts/'+id+'/regenerate-card',{method:'POST'});load();}
+  catch(e){alert(e.message);}
+}
+async function sendtg(id){
+  try{await api('/api/workouts/'+id+'/send-telegram',{method:'POST'});load();}
+  catch(e){alert(e.message);}
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  $('#syncBtn').onclick=function(){
+    var b=$('#syncBtn');
+    b.textContent='Syncing…';b.disabled=true;
+    api('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})})
+    .then(function(r){b.textContent='↻ Sync now';b.disabled=false;alert('Synced '+r.synced+' workouts');load();})
+    .catch(function(e){b.textContent='↻ Sync now';b.disabled=false;alert(e.message);});
+  };
+
+  $('#sendAllTgBtn').onclick=function(){
+    if(!confirm('Send ALL workouts to Telegram?'))return;
+    var b=$('#sendAllTgBtn');
+    b.textContent='Sending…';b.disabled=true;
+    var st=$('#sendAllTgStatus');
+    api('/api/telegram/send-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resetSent:true})})
+    .then(function(r){st.textContent='✓ '+r.sent+' sent, '+r.failed+' failed';b.textContent='Send all to Telegram';b.disabled=false;setTimeout(function(){st.textContent='';},10000);load();})
+    .catch(function(e){b.textContent='Send all to Telegram';b.disabled=false;alert(e.message);});
+  };
+
+  var SETTINGS_HTML='<h3>Settings</h3>'
+    +'<label>Lyfta email</label><input id="se_email">'
+    +'<label>Lyfta password (leave blank to keep current)</label><input id="se_password" type="password">'
+    +'<label>Lyfta device id</label><input id="se_device" placeholder="e.g. samsung, SM-A127F, 13">'
+    +'<hr style="border-color:var(--line);margin:1.2rem 0">'
+    +'<label>Telegram bot token</label><input id="se_tg_token" type="password">'
+    +'<label>Telegram chat id</label><input id="se_tg_chat">'
+    +'<label>Send new workouts to Telegram automatically</label><input id="se_tg_enabled" type="checkbox">'
+    +'<label>Caption template</label><textarea id="se_caption" rows="6"></textarea>'
+    +'<p class="tag">Tokens: &lt;date&gt; &lt;workoutname&gt; &lt;duration&gt; &lt;volume&gt; &lt;volumeformatted&gt; &lt;totalsets&gt; &lt;exercises&gt; &lt;workoutnumber&gt; &lt;calories&gt; &lt;bodyweight&gt;</p>'
+    +'<label>Sync schedule (cron)</label><input id="se_cron">'
+    +'<div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn acc" id="seSave">Save</button><button class="btn" id="seTestTg">Test →</button><button class="btn" id="seClose">Close</button></div>'
+    +'<hr style="border-color:var(--line);margin:1.2rem 0">'
+    +'<h3 style="margin-bottom:.5rem">Logs</h3>'
+    +'<div style="display:flex;gap:.5rem;margin-bottom:.8rem"><button class="btn" id="seRefreshLogs">↻ Refresh</button><button class="btn" id="seClearLogs">Clear</button></div>'
+    +'<div id="logBox" style="max-height:300px;overflow-y:auto;background:#0e0f13;border:1px solid var(--line);border-radius:9px;padding:.6rem;font-family:monospace;font-size:.76rem;line-height:1.5"></div>';
+
+  $('#settingsBtn').onclick=function(){
+    $('#dlgBody').innerHTML=SETTINGS_HTML;
+    api('/api/settings')
+    .then(function(s){
+      document.getElementById('se_email').value=s.lyfta_email||'';
+      document.getElementById('se_device').value=s.lyfta_device_id||'';
+      document.getElementById('se_tg_token').value=s.telegram_bot_token||'';
+      document.getElementById('se_tg_chat').value=s.telegram_chat_id||'';
+      document.getElementById('se_tg_enabled').checked=s.telegram_enabled==='1';
+      document.getElementById('se_caption').value=s.telegram_caption||'';
+      document.getElementById('se_cron').value=s.sync_cron||'';
+    })
+    .catch(function(e){showError(e.message);});
+    refreshLogs();
+    document.getElementById('seSave').onclick=function(){saveSettings();};
+    document.getElementById('seTestTg').onclick=function(){testTg();};
+    document.getElementById('seClose').onclick=function(){$('#dlg').close();};
+    document.getElementById('seRefreshLogs').onclick=function(){refreshLogs();};
+    document.getElementById('seClearLogs').onclick=function(){
+      api('/api/logs/clear',{method:'POST'}).then(function(){refreshLogs();}).catch(function(e){alert(e.message);});
+    };
+    $('#dlg').showModal();
+  };
+
+  function saveSettings(){
+    var body={
+      lyfta_email:document.getElementById('se_email').value,
+      lyfta_device_id:document.getElementById('se_device').value,
+      telegram_bot_token:document.getElementById('se_tg_token').value,
+      telegram_chat_id:document.getElementById('se_tg_chat').value,
+      telegram_enabled:document.getElementById('se_tg_enabled').checked?'1':'0',
+      telegram_caption:document.getElementById('se_caption').value,
+      sync_cron:document.getElementById('se_cron').value
+    };
+    var pw=document.getElementById('se_password').value;
+    if(pw)body.lyfta_password=pw;
+    api('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(){alert('Saved ✓');})
+    .catch(function(e){alert(e.message);});
+  }
+
+  function testTg(){
+    api('/api/test-telegram',{method:'POST'})
+    .then(function(){alert('Sent ✓');})
+    .catch(function(e){alert(e.message);});
+  }
+
+  function refreshLogs(){
+    api('/api/logs?limit=200')
+    .then(function(r){
+      var box=document.getElementById('logBox');
+      if(!box)return;
+      if(!r.items.length){box.innerHTML='<span style="color:var(--muted)">No logs yet</span>';return}
+      box.innerHTML=r.items.map(function(l){
+        var d=new Date(l.ts);
+        var ts=d.toLocaleTimeString()+'.'+String(d.getMilliseconds()).padStart(3,'0');
+        var color=l.level==='error'?'#ff6b6b':l.level==='warn'?'#ffd93d':'#a0e7a0';
+        return '<div><span style="color:'+color+'">['+l.level.toUpperCase()+']</span> <span style="color:var(--muted)">'+ts+'</span> '+l.message.replace(/</g,'&lt;')+'</div>';
+      }).join('');
+      box.scrollTop=box.scrollHeight;
+    })
+    .catch(function(){});
+  }
+
+  load();
+});
 </script>
