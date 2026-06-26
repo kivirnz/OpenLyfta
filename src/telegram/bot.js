@@ -42,8 +42,8 @@ const TOKENS = {
   duration: (w) => w.workout_duration || '',
   volume: (w) => String(w.total_volume || w.totalLiftedWeight || 0),
   volumeformatted: (w) => {
-    const n = +(w.total_volume || w.totalLiftedWeight || 0);
-    return n >= 1000 ? `${(n / 1000).toFixed(2)}t` : `${Math.round(n)}kg`;
+    const n = Math.round(+(w.total_volume || w.totalLiftedWeight || 0));
+    return n.toLocaleString('en-US') + 'kg';
   },
   totalsets: (w, sets) => String(sets),
   exercises: (w) => String((w.exercises || []).length),

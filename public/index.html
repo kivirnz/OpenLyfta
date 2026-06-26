@@ -70,6 +70,8 @@ async function api(p,o){
   return r.json();
 }
 function fmt(d){return (d||'').replace('T',' ').slice(0,16);}
+function cleanTitle(t){if(!t)return 'Untitled';return t.replace(/\\u([0-9a-fA-F]{4})/g,function(_,c){return String.fromCharCode(parseInt(c,16));});}
+function cleanType(t){if(!t||t==='PERFORM_WORKOUT_TEMPLATE'||t==='PERFORM_WORKOUT')return'';return t.replace(/_/g,' ').toLowerCase();}
 function stat(n,l){return '<div class="stat"><span class="v">'+n+'</span><span class="l">'+l+'</span></div>';}
 function showError(msg){$('#errorBox').innerHTML='<div class="error-box">'+msg+'</div>';}
 function clearError(){$('#errorBox').innerHTML='';}
@@ -121,10 +123,10 @@ async function load(){
       return '<div class="workout">'
         +'<div class="pic" style="background-image:url('+pic+')" data-id="'+w.id+'" data-src="'+pic+'"></div>'
         +'<div class="meta">'
-        +'<h3 class="title">'+(w.title||'Untitled')+'</h3>'
+        +'<h3 class="title">'+cleanTitle(w.title)+'</h3>'
         +'<p class="sub">#'+(w.workout_number||'')+' · '+fmt(w.workout_perform_date)+' · '+(w.workout_duration||'')+'</p>'
         +'<div class="chips"><span class="chip acc">'+(w.total_volume||0).toLocaleString()+' kg</span>'
-        +'<span class="chip">'+(w.workoutType||'')+'</span>'
+        +(cleanType(w.workoutType)?'<span class="chip">'+cleanType(w.workoutType)+'</span>':'')
         +(w.telegram_sent?'<span class="chip" style="color:var(--ok)">Telegram sent ✓</span>':'')
         +'</div>'
         +'<div class="btns">'
@@ -160,7 +162,7 @@ async function view(id, src){
 
     var imgSrc=src||('/api/workouts/'+id+'/card.jpg');
     $('#dlgBody').innerHTML='<div class="cardrepos"><img class="modalimg" src="'+imgSrc+'" style="max-width:46%"></div>'
-      +'<h3>'+w.title+'</h3><p class="tag">#'+w.workout_number+' · '+fmt(w.workout_perform_date)+'</p>'
+      +'<h3>'+cleanTitle(w.title)+'</h3><p class="tag">#'+w.workout_number+' · '+fmt(w.workout_perform_date)+'</p>'
       +'<ul>'+exhtml+'</ul>'
       +'<div style="text-align:right;margin-top:1rem"><button class="btn" onclick="closeDlg()">Close</button></div>';
     $('#dlg').showModal();
