@@ -7,7 +7,7 @@ const { URL } = require('node:url');
 function tgRequest(token, method, form) {
   return new Promise((resolve, reject) => {
     const u = new URL(`https://api.telegram.org/bot${token}/${method}`);
-    const bb = Buffer.concat(form.parts);
+    const bb = form.build();
     const req = https.request({
       method: 'POST', hostname: u.hostname, path: u.pathname,
       headers: { 'Content-Type': `multipart/form-data; boundary=${form.boundary}`, 'Content-Length': bb.length },
@@ -33,6 +33,10 @@ class Multipart {
     this.parts.push(buf);
     this.parts.push(Buffer.from('\r\n'));
     return this;
+  }
+  build() {
+    this.parts.push(Buffer.from(`--${this.boundary}--\r\n`));
+    return Buffer.concat(this.parts);
   }
 }
 
@@ -63,7 +67,7 @@ const TOKENS = {
 
 function renderTemplate(tpl, workout, sets, unit, opts) {
   return (tpl || '').replace(/<([a-zA-Z0-9_]+)>/g, (_, k) => {
-    if (k.toLowerCase() === 'sharelink' && opts && opts.shareUrl) return opts.shareUrl;
+    if (k.toLowerCase() === 'sharelink') return (opts && opts.shareUrl) ? opts.shareUrl : '';
     const fn = TOKENS[k.toLowerCase()];
     return fn ? String(fn(workout, sets, unit) || '') : `<${k}>`;
   });
