@@ -134,14 +134,23 @@ class Pipeliner {
     const captionTpl = this.store.setting('telegram_caption') || '';
     if (resetSent) this.store.resetTelegramSent();
     const queue = this.store.telegramAll();
+
+    this.logger.log(`[pipeline] pre-generating cards for ${queue.length} workouts...`);
+    let noCard = 0;
+    for (const w of queue) {
+      if (!w.card_path || !fs.existsSync(w.card_path)) {
+        try { await this.generateForWorkoutId(w.id); }
+        catch (e) { noCard++; this.logger.warn(`[pipeline] card generation failed for workout ${w.id} (${w.title || 'untitled'}): ${e.message}`); }
+      }
+    }
+    if (noCard) this.logger.warn(`[pipeline] ${noCard} workouts have no card and will be skipped`);
+
+    const sendable = queue.filter((w) => w.card_path && fs.existsSync(w.card_path));
     let sent = 0;
     let failed = 0;
-    this.logger.log(`[pipeline] sending ${queue.length} workouts to Telegram (oldest first)`);
-    for (const w of queue) {
+    this.logger.log(`[pipeline] sending ${sendable.length} workouts to Telegram (oldest first, 1.5s delay)`);
+    for (const w of sendable) {
       try {
-        if (!w.card_path || !fs.existsSync(w.card_path)) {
-          await this.generateForWorkoutId(w.id);
-        }
         let retries = 0;
         while (retries < 3) {
           try {
@@ -160,15 +169,15 @@ class Pipeliner {
           }
         }
         sent++;
-        this.logger.log(`[pipeline] sent workout ${w.id} (${sent}/${queue.length})`);
+        this.logger.log(`[pipeline] sent workout ${w.id} #${w.workout_number || '?'} (${sent}/${sendable.length})`);
         await this._sleep(1500);
       } catch (e) {
         failed++;
-        this.logger.warn(`[pipeline] telegram send failed for ${w.id}: ${e.message}`);
+        this.logger.warn(`[pipeline] telegram send failed for ${w.id} #${w.workout_number || '?'}: ${e.message}`);
       }
     }
-    this.logger.log(`[pipeline] bulk send complete: ${sent} sent, ${failed} failed`);
-    return { sent, failed, total: queue.length };
+    this.logger.log(`[pipeline] bulk send complete: ${sent} sent, ${failed} failed, ${noCard} skipped (no card)`);
+    return { sent, failed, skipped: noCard, total: queue.length };
   }
 
   async regenerateAllCards() {
@@ -189,7 +198,8 @@ class Pipeliner {
 
   async runAll({ forceCard = false } = {}) {
     const ids = await this.syncer.runFull({ forceCard });
-    // After sync, ensure exercise muscle data is current then build cards for new workouts
+    const fixedNums = this.store.fixMissingWorkoutNumbers();
+    if (fixedNums) this.logger.log(`[pipeline] auto-assigned workout numbers to ${fixedNums} workouts`);
     for (const id of ids) {
       if (!forceCard) { try { await this.syncer.syncExercisesFor(this.store.getWorkout(id)); } catch {} }
       try { await this.generateForWorkoutId(id); } catch (e) { this.logger.warn(`[pipeline] card gen failed for ${id}: ${e.message}`); }

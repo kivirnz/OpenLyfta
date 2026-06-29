@@ -61,6 +61,9 @@ async function main() {
   const syncer = new Syncer({ store, config, logger });
   const pipeliner = new Pipeliner({ store, syncer, config, logger });
 
+  const fixedNums = store.fixMissingWorkoutNumbers();
+  if (fixedNums) logger.log(`[boot] auto-assigned workout numbers to ${fixedNums} workouts`);
+
   const session = makeSession(store);
   const app = express();
   app.use(compression());

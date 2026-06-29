@@ -302,7 +302,19 @@ class Store {
   markTelegramSent(id) { this._prepare('UPDATE workouts SET telegram_sent=1 WHERE id=?').run(id); }
   resetTelegramSent() { this._prepare('UPDATE workouts SET telegram_sent=0').run(); }
   telegramUnsent() { return this._prepare('SELECT * FROM workouts WHERE telegram_sent=0 AND card_path IS NOT NULL ORDER BY workout_perform_date ASC').all(); }
-  telegramAll() { return this._prepare('SELECT * FROM workouts ORDER BY workout_perform_date ASC').all(); }
+  telegramAll() { return this._prepare('SELECT * FROM workouts ORDER BY workout_perform_date ASC, id ASC').all(); }
+
+  fixMissingWorkoutNumbers() {
+    const all = this.telegramAll();
+    let fixed = 0;
+    for (let i = 0; i < all.length; i++) {
+      if (!all[i].workout_number) {
+        this._prepare('UPDATE workouts SET workout_number=? WHERE id=?').run(i + 1, all[i].id);
+        fixed++;
+      }
+    }
+    return fixed;
+  }
 
   saveDevice(d) {
     this._prepare('INSERT INTO devices(user_id,device_id,device_type,auth_token,last_login) VALUES(?,?,?,?,?) ON CONFLICT(user_id,device_id) DO UPDATE SET device_type=excluded.device_type,auth_token=excluded.auth_token,last_login=excluded.last_login')
