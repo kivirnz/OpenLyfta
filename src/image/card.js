@@ -286,6 +286,36 @@ async function generateCollage(workout, { exerciseImages, outPath, logger = cons
       comps.push({ input: logo, blend: 'over', left: 24, top: gridH + (logoH - targetH) / 2 - 8 });
     }
 
+    // Stats overlay at bottom-right (only on first page)
+    if (p === 0) {
+      const sets = countSets(workout);
+      const volume = fmtVolume(workout.total_volume || workout.totalLiftedWeight || 0);
+      const durationRaw = (workout.workout_duration || '00:00:00');
+      const parts = durationRaw.split(':');
+      let duration = durationRaw;
+      if (parts.length === 3) {
+        const h = parseInt(parts[0], 10);
+        if (h === 0) { duration = parts.slice(1).join(':'); }
+        else { duration = h + ':' + parts[1] + ':' + parts[2]; }
+      } else if (parts.length === 2) {
+        const m = parseInt(parts[0], 10);
+        duration = m + ':' + parts[1];
+      }
+      const statsLines = [
+        'Weight Lifted: ' + volume,
+        'Duration: ' + duration,
+        'Total Sets: ' + String(sets),
+      ];
+      const statsFS = 28;
+      const statsLineH = 38;
+      const statsH = statsLines.length * statsLineH;
+      const statsSvg = Buffer.from(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="${PW}" height="${statsH}">
+          ${statsLines.map((s, i) => `<text x="${PW - 24}" y="${(i + 1) * statsLineH - 8}" text-anchor="end" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="${statsFS}" fill="#ffffff" font-weight="600">${esc(s)}</text>`).join('\n')}
+        </svg>`);
+      comps.push({ input: statsSvg, blend: 'over', left: 0, top: gridH - statsH - 12 });
+    }
+
     const pagePath = pages.length > 1 ? outPath.replace(/\.jpg$/, `_${p + 1}.jpg`) : outPath;
     const out = await sharp({ create: { width: PW, height: PH, channels: 4, background: { r: 17, g: 19, b: 23, alpha: 1 } } })
       .composite(comps)
