@@ -224,4 +224,53 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
   return outPath;
 }
 
-module.exports = { generateCard, hexToRgb, fmtVolume };
+// Generate a 3x3 exercise collage card for workouts without a picture.
+// exerciseImages: array of { buf, name, sets }
+async function generateCollage(workout, { exerciseImages, outPath, logger = console } = {}) {
+  const PW = 1080, PH = 1434;
+  const cols = 3, rows = 3;
+  const padding = 24;
+  const gap = 12;
+  const cellW = Math.floor((PW - padding * 2 - gap * (cols - 1)) / cols);
+  const cellH = Math.floor((PH - padding * 2 - gap * (rows - 1)) / rows);
+  const imgH = Math.round(cellH * 0.72);
+  const textH = cellH - imgH;
+  const fs24 = 24;
+
+  const items = exerciseImages.slice(0, 9);
+  const comps = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const x = padding + col * (cellW + gap);
+    const y = padding + row * (cellH + gap);
+
+    const item = items[i];
+    let imgBuf;
+    try {
+      imgBuf = await sharp(item.buf)
+        .resize({ width: cellW, height: imgH, fit: 'contain', background: { r: 25, g: 28, b: 35, alpha: 1 } })
+        .png().toBuffer();
+    } catch { continue; }
+    comps.push({ input: imgBuf, blend: 'over', left: x, top: y });
+
+    const label = `${item.sets} × ${item.name}`;
+    const textSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="${cellW}" height="${textH}">
+        <text x="${cellW / 2}" y="${textH / 2 + fs24 / 3}" text-anchor="middle" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="${fs24}" fill="#ffffff" font-weight="600">${esc(label)}</text>
+      </svg>`);
+    comps.push({ input: textSvg, blend: 'over', left: x, top: y + imgH });
+  }
+
+  const out = await sharp({ create: { width: PW, height: PH, channels: 4, background: { r: 17, g: 19, b: 23, alpha: 1 } } })
+    .composite(comps)
+    .jpeg({ quality: 92 }).toBuffer();
+
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, out);
+  logger.log(`[collage] wrote ${outPath} (${PW}x${PH})`);
+  return outPath;
+}
+
+module.exports = { generateCard, generateCollage, hexToRgb, fmtVolume };

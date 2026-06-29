@@ -1,7 +1,8 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const { generateCard } = require('../image/card');
+const { URL } = require('node:url');
+const { generateCard, generateCollage } = require('../image/card');
 const { sendCard } = require('../telegram/bot');
 
 function setCount(workout) {
@@ -36,8 +37,9 @@ class Pipeliner {
   async generateForWorkoutId(id) {
     const workout = this.store.getWorkout(id);
     if (!workout) throw new Error(`workout ${id} not found`);
-    if (!workout.picture_path || !fs.existsSync(workout.picture_path)) {
-      throw new Error(`workout ${id} has no local picture`);
+    const hasPicture = workout.picture_path && fs.existsSync(workout.picture_path);
+    if (!hasPicture) {
+      return this._generateCollageForWorkout(workout);
     }
     const { primary, secondary } = this.muscleIdsForWorkout(workout);
     const profile = this.store.getUserProfile(workout.user_id);
@@ -45,6 +47,36 @@ class Pipeliner {
     const outPath = path.join(this.cardDir, `${id}.jpg`);
     await generateCard(workout, { primaryMuscleIds: primary, secondaryMuscleIds: secondary, outPath, gender, logger: this.logger });
     this.store.setWorkoutCardPath(id, outPath);
+    return outPath;
+  }
+
+  async _generateCollageForWorkout(workout) {
+    const exercises = (workout.exercises || []).filter((e) => e.exercise_image).slice(0, 9);
+    if (!exercises.length) throw new Error(`workout ${workout.id} has no picture and no exercise images for collage`);
+    const exerciseDir = path.join(this.config.MEDIA_DIR || path.join(process.cwd(), 'data', 'media'), 'exercise');
+    fs.mkdirSync(exerciseDir, { recursive: true });
+    const imageBuffers = [];
+    for (const ex of exercises) {
+      let buf;
+      const cachePath = path.join(exerciseDir, path.basename(new URL(ex.exercise_image).pathname));
+      if (fs.existsSync(cachePath)) {
+        buf = fs.readFileSync(cachePath);
+      } else {
+        if (!this.syncer || !this.syncer.client) throw new Error(`workout ${workout.id} no picture and no syncer to download exercise images`);
+        try {
+          buf = await this.syncer.client.fetchAsset(ex.exercise_image);
+          fs.writeFileSync(cachePath, buf);
+        } catch (e) {
+          this.logger.warn(`[pipeline] exercise image download failed for ${ex.exercise_id}: ${e.message}`);
+          continue;
+        }
+      }
+      imageBuffers.push({ buf, name: ex.excercise_name || 'Exercise', sets: (ex.sets || []).length });
+    }
+    if (!imageBuffers.length) throw new Error(`workout ${workout.id} could not download any exercise images for collage`);
+    const outPath = path.join(this.cardDir, `${workout.id}.jpg`);
+    await generateCollage(workout, { exerciseImages: imageBuffers, outPath, logger: this.logger });
+    this.store.setWorkoutCardPath(workout.id, outPath);
     return outPath;
   }
 
@@ -80,7 +112,7 @@ class Pipeliner {
     if (!tgBotToken || !tgChatId) throw new Error('Telegram not configured');
     const captionTpl = this.store.setting('telegram_caption') || '';
     if (resetSent) this.store.resetTelegramSent();
-    const queue = this.store.telegramAllWithPictures();
+    const queue = this.store.telegramAll();
     let sent = 0;
     let failed = 0;
     this.logger.log(`[pipeline] sending ${queue.length} workouts to Telegram`);

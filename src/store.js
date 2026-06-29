@@ -296,8 +296,8 @@ class Store {
   setWorkoutCardPath(id, p) { this._prepare('UPDATE workouts SET card_path=? WHERE id=?').run(p, id); }
   markTelegramSent(id) { this._prepare('UPDATE workouts SET telegram_sent=1 WHERE id=?').run(id); }
   resetTelegramSent() { this._prepare('UPDATE workouts SET telegram_sent=0').run(); }
-  telegramUnsent() { return this._prepare('SELECT * FROM workouts WHERE telegram_sent=0 AND card_path IS NOT NULL AND picture_path IS NOT NULL ORDER BY workout_perform_date ASC').all(); }
-  telegramAllWithPictures() { return this._prepare('SELECT * FROM workouts WHERE picture_path IS NOT NULL ORDER BY workout_perform_date ASC').all(); }
+  telegramUnsent() { return this._prepare('SELECT * FROM workouts WHERE telegram_sent=0 AND card_path IS NOT NULL ORDER BY workout_perform_date ASC').all(); }
+  telegramAll() { return this._prepare('SELECT * FROM workouts ORDER BY workout_perform_date ASC').all(); }
 
   saveDevice(d) {
     this._prepare('INSERT INTO devices(user_id,device_id,device_type,auth_token,last_login) VALUES(?,?,?,?,?) ON CONFLICT(user_id,device_id) DO UPDATE SET device_type=excluded.device_type,auth_token=excluded.auth_token,last_login=excluded.last_login')
