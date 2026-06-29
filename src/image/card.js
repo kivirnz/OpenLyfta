@@ -95,8 +95,12 @@ async function buildBodyFigure({ primaryIds, secondaryIds, primary, secondaryLig
   return { frontPng, backPng, W, H, BW, BH };
 }
 
-function fmtVolume(v) {
+function fmtVolume(v, unit) {
   const n = Math.round(+v || 0);
+  if (unit === 'lbs') {
+    const lbs = Math.round(n * 2.20462);
+    return lbs.toLocaleString('en-US') + 'lbs';
+  }
   return n.toLocaleString('en-US') + 'kg';
 }
 
@@ -114,7 +118,7 @@ function validGender(g) {
 }
 
 // Build the full share card. Returns path to JPEG written to outPath.
-async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds = [], outPath, gender = null, logger = console } = {}) {
+async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds = [], outPath, gender = null, unit = 'kg', logger = console } = {}) {
   const picturePath = workout.picture_path || workout.picturePath;
   if (!picturePath || !fs.existsSync(picturePath)) throw new Error(`workout ${workout.id} has no local picture`);
   const pic = await sharp(picturePath).metadata();
@@ -142,7 +146,7 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
 
   // Stats: vertical stack above the body model — label then value, centred, with gaps between groups
   const sets = countSets(workout);
-  const volume = fmtVolume(workout.total_volume || workout.totalLiftedWeight || 0);
+  const volume = fmtVolume(workout.total_volume || workout.totalLiftedWeight || 0, unit);
   const durationRaw = (workout.workout_duration || '00:00:00');
   const parts = durationRaw.split(':');
   let duration = durationRaw;
@@ -227,7 +231,7 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
 // Generate 3x3 exercise collage card(s) for workouts without a picture.
 // Returns array of output paths (one per 9 exercises).
 // exerciseImages: array of { buf, name, sets }
-async function generateCollage(workout, { exerciseImages, outPath, logger = console } = {}) {
+async function generateCollage(workout, { exerciseImages, outPath, unit = 'kg', logger = console } = {}) {
   const PW = 1080;
   const cols = 3, rows = 3;
   const padding = 24;
@@ -289,7 +293,7 @@ async function generateCollage(workout, { exerciseImages, outPath, logger = cons
     // Stats overlay at bottom-right (only on first page)
     if (p === 0) {
       const sets = countSets(workout);
-      const volume = fmtVolume(workout.total_volume || workout.totalLiftedWeight || 0);
+      const volume = fmtVolume(workout.total_volume || workout.totalLiftedWeight || 0, unit);
       const durationRaw = (workout.workout_duration || '00:00:00');
       const parts = durationRaw.split(':');
       let duration = durationRaw;

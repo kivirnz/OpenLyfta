@@ -81,10 +81,11 @@ function apiRouter({ store, pipeliner, config }) {
     telegram_enabled: store.setting('telegram_enabled'),
     telegram_caption: store.setting('telegram_caption') || defaultCaption(),
     sync_cron: store.setting('sync_cron') || '*/10 * * * *',
+    weight_unit: store.setting('weight_unit') || 'kg',
   }));
   router.post('/settings', (req, res) => {
     const body = req.body || {};
-    for (const k of ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled', 'telegram_caption', 'sync_cron', 'lyfta_email', 'lyfta_device_id', 'lyfta_password']) {
+    for (const k of ['telegram_bot_token', 'telegram_chat_id', 'telegram_enabled', 'telegram_caption', 'sync_cron', 'lyfta_email', 'lyfta_device_id', 'lyfta_password', 'weight_unit']) {
       if (body[k] !== undefined) store.setting(k, String(body[k]));
     }
     res.json({ ok: true });
@@ -108,7 +109,7 @@ function apiRouter({ store, pipeliner, config }) {
     const tpl = String(req.query.tpl || '');
     const sample = store.getWorkouts({ limit: 1 })[0] || { workout_perform_date: '2026-06-25 08:24', title: 'Sample', workout_duration: '00:48:13', total_volume: 2640, workout_number: 70, total_calories_burned: 180, body_weight: 79, exercises: new Array(5).fill({}) };
     const { setCount } = require('../lib/pipeline');
-    res.json({ caption: renderTemplate(tpl, sample, setCount(sample)) });
+    res.json({ caption: renderTemplate(tpl, sample, setCount(sample), store.setting('weight_unit') || 'kg') });
   });
 
   router.get('/profile', (req, res) => {

@@ -40,27 +40,36 @@ const TOKENS = {
   date: (w) => (w.workout_perform_date || w.create_date || '').slice(0, 16).replace('T', ' '),
   workoutname: (w) => w.title || '',
   duration: (w) => w.workout_duration || '',
-  volume: (w) => String(w.total_volume || w.totalLiftedWeight || 0),
-  volumeformatted: (w) => {
+  volume: (w, _s, unit) => {
     const n = Math.round(+(w.total_volume || w.totalLiftedWeight || 0));
+    if (unit === 'lbs') return String(Math.round(n * 2.20462));
+    return String(n);
+  },
+  volumeformatted: (w, _s, unit) => {
+    const n = Math.round(+(w.total_volume || w.totalLiftedWeight || 0));
+    if (unit === 'lbs') return Math.round(n * 2.20462).toLocaleString('en-US') + 'lbs';
     return n.toLocaleString('en-US') + 'kg';
   },
   totalsets: (w, sets) => String(sets),
   exercises: (w) => String((w.exercises || []).length),
   workoutnumber: (w) => String(w.workout_number || ''),
   calories: (w) => String(w.total_calories_burned || 0),
-  bodyweight: (w) => String(w.body_weight || ''),
+  bodyweight: (w, _s, unit) => {
+    const n = Math.round(+(w.body_weight || 0));
+    if (unit === 'lbs') return String(Math.round(n * 2.20462));
+    return String(n);
+  },
 };
 
-function renderTemplate(tpl, workout, sets) {
+function renderTemplate(tpl, workout, sets, unit) {
   return (tpl || '').replace(/<([a-zA-Z0-9_]+)>/g, (_, k) => {
     const fn = TOKENS[k.toLowerCase()];
-    return fn ? String(fn(workout, sets) || '') : `<${k}>`;
+    return fn ? String(fn(workout, sets, unit) || '') : `<${k}>`;
   });
 }
 
-async function sendCard({ botToken, chatId, cardPath, caption, workout, totalSets }) {
-  const cap = caption != null ? renderTemplate(caption, workout, totalSets) : '';
+async function sendCard({ botToken, chatId, cardPath, caption, workout, totalSets, unit }) {
+  const cap = caption != null ? renderTemplate(caption, workout, totalSets, unit) : '';
   const form = new Multipart();
   form.field('chat_id', chatId);
   form.file('photo', path.basename(cardPath), 'image/jpeg', fs.readFileSync(cardPath));

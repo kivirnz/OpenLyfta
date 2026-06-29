@@ -21,6 +21,8 @@ class Pipeliner {
     fs.mkdirSync(this.cardDir, { recursive: true });
   }
 
+  _unit() { return this.store.setting('weight_unit') || 'kg'; }
+
   // Collect primary muscle ids across all exercises in a workout from exercise metadata.
   muscleIdsForWorkout(workout) {
     const primary = new Set();
@@ -45,7 +47,7 @@ class Pipeliner {
     const profile = this.store.getUserProfile(workout.user_id);
     const gender = profile ? profile.gender : null;
     const outPath = path.join(this.cardDir, `${id}.jpg`);
-    await generateCard(workout, { primaryMuscleIds: primary, secondaryMuscleIds: secondary, outPath, gender, logger: this.logger });
+    await generateCard(workout, { primaryMuscleIds: primary, secondaryMuscleIds: secondary, outPath, gender, unit: this._unit(), logger: this.logger });
     this.store.setWorkoutCardPath(id, outPath);
     return outPath;
   }
@@ -75,7 +77,7 @@ class Pipeliner {
     }
     if (!imageBuffers.length) throw new Error(`workout ${workout.id} could not download any exercise images for collage`);
     const outPath = path.join(this.cardDir, `${workout.id}.jpg`);
-    const allPaths = await generateCollage(workout, { exerciseImages: imageBuffers, outPath, logger: this.logger });
+    const allPaths = await generateCollage(workout, { exerciseImages: imageBuffers, outPath, unit: this._unit(), logger: this.logger });
     const primaryPath = allPaths[0];
     this.store.setWorkoutCardPath(workout.id, primaryPath, allPaths);
     return primaryPath;
@@ -113,7 +115,7 @@ class Pipeliner {
     for (let i = 0; i < paths.length; i++) {
       if (!fs.existsSync(paths[i])) throw new Error(`card file missing: ${paths[i]}`);
       const cap = i === 0 ? captionTpl : '';
-      await sendCard({ botToken: botToken, chatId, cardPath: paths[i], caption: cap, workout: full, totalSets: setCount(full) });
+      await sendCard({ botToken: botToken, chatId, cardPath: paths[i], caption: cap, workout: full, totalSets: setCount(full), unit: this._unit() });
     }
     this.store.markTelegramSent(workoutId);
   }

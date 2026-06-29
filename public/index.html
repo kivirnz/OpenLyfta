@@ -72,6 +72,10 @@ async function api(p,o){
 function fmt(d){return (d||'').replace('T',' ').slice(0,16);}
 function cleanTitle(t){if(!t)return 'Untitled';return t.replace(/\\u([0-9a-fA-F]{4})/g,function(_,c){return String.fromCharCode(parseInt(c,16));});}
 function cleanType(t){if(!t||t==='PERFORM_WORKOUT_TEMPLATE'||t==='PERFORM_WORKOUT')return'';return t.replace(/_/g,' ').toLowerCase();}
+var _wu='kg';
+function kgToUnit(n){n=+n||0;return _wu==='lbs'?Math.round(n*2.20462):n;}
+function unitLabel(){return _wu;}
+function fmtW(n){return kgToUnit(n).toLocaleString('en-US')+' '+unitLabel();}
 function stat(n,l){return '<div class="stat"><span class="v">'+n+'</span><span class="l">'+l+'</span></div>';}
 function showError(msg){$('#errorBox').innerHTML='<div class="error-box">'+msg+'</div>';}
 function clearError(){$('#errorBox').innerHTML='';}
@@ -83,6 +87,8 @@ async function load(){
   try{
     var st=await api('/api/stats');
     var list=await api('/api/workouts?limit=60');
+    var settings=await api('/api/settings').catch(function(){return{}});
+    _wu=settings.weight_unit||'kg';
     var profileRes=await api('/api/profile').catch(function(){return{profile:null}});
     var profile=profileRes.profile;
 
@@ -125,7 +131,7 @@ async function load(){
         +'<div class="meta">'
         +'<h3 class="title">'+cleanTitle(w.title)+'</h3>'
         +'<p class="sub">#'+(w.workout_number||'')+' · '+fmt(w.workout_perform_date)+' · '+(w.workout_duration||'')+'</p>'
-        +'<div class="chips"><span class="chip acc">'+(w.total_volume||0).toLocaleString()+' kg</span>'
+        +'<div class="chips"><span class="chip acc">'+fmtW(w.total_volume||0)+'</span>'
         +(cleanType(w.workoutType)?'<span class="chip">'+cleanType(w.workoutType)+'</span>':'')
         +(w.telegram_sent?'<span class="chip" style="color:var(--ok)">Telegram sent ✓</span>':'')
         +'</div>'
@@ -153,7 +159,7 @@ async function view(id, src){
     var w=await api('/api/workouts/'+id);
     var exhtml=(w.exercises||[]).map(function(e){
       var setsHtml=(e.sets||[]).map(function(s){
-        return '<li>'+(s.weight?'<b>'+s.weight+'kg</b> · ':'')+(s.reps?s.reps+' reps':'')+(s.duration?s.duration:'')+(s.record_value?' <span class="tag">🏆 '+s.record_value+'</span>':'')+'</li>';
+        return '<li>'+(s.weight?'<b>'+kgToUnit(s.weight)+' '+_wu+'</b> · ':'')+(s.reps?s.reps+' reps':'')+(s.duration?s.duration:'')+(s.record_value?' <span class="tag">🏆 '+s.record_value+'</span>':'')+'</li>';
       }).join('');
       return '<li><b>'+e.excercise_name+'</b> <span class="tag">'+(e.exercise_type||'')+'</span>'
         +(e.exercise_note?'<br><span class="tag">📝 '+e.exercise_note+'</span>':'')
@@ -225,6 +231,7 @@ document.addEventListener('DOMContentLoaded', function(){
     +'<label>Caption template</label><textarea id="se_caption" rows="6"></textarea>'
     +'<p class="tag">Tokens: &lt;date&gt; &lt;workoutname&gt; &lt;duration&gt; &lt;volume&gt; &lt;volumeformatted&gt; &lt;totalsets&gt; &lt;exercises&gt; &lt;workoutnumber&gt; &lt;calories&gt; &lt;bodyweight&gt;</p>'
     +'<label>Sync schedule (cron)</label><input id="se_cron">'
+    +'<label>Weight unit</label><select id="se_unit"><option value="kg">kg (kilograms)</option><option value="lbs">lbs (pounds)</option></select>'
     +'<div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn acc" id="seSave">Save</button><button class="btn" id="seTestTg">Test →</button><button class="btn" id="seClose">Close</button></div>'
     +'<hr style="border-color:var(--line);margin:1.2rem 0">'
     +'<h3 style="margin-bottom:.5rem">Logs</h3>'
@@ -242,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function(){
       document.getElementById('se_tg_enabled').checked=s.telegram_enabled==='1';
       document.getElementById('se_caption').value=s.telegram_caption||'';
       document.getElementById('se_cron').value=s.sync_cron||'';
+      document.getElementById('se_unit').value=s.weight_unit||'kg';
     })
     .catch(function(e){showError(e.message);});
     refreshLogs();
@@ -263,7 +271,8 @@ document.addEventListener('DOMContentLoaded', function(){
       telegram_chat_id:document.getElementById('se_tg_chat').value,
       telegram_enabled:document.getElementById('se_tg_enabled').checked?'1':'0',
       telegram_caption:document.getElementById('se_caption').value,
-      sync_cron:document.getElementById('se_cron').value
+      sync_cron:document.getElementById('se_cron').value,
+      weight_unit:document.getElementById('se_unit').value
     };
     var pw=document.getElementById('se_password').value;
     if(pw)body.lyfta_password=pw;
