@@ -39,6 +39,13 @@ input,textarea{width:100%;padding:.6rem;border-radius:9px;border:1px solid var(-
 .onboard h2{margin:0 0 .5rem}
 .onboard p{color:var(--muted);margin:0 0 1rem}
 .error-box{background:rgba(255,107,107,.1);border:1px solid var(--err);border-radius:10px;padding:1rem;margin-bottom:1.5rem;color:var(--err)}
+.type-badge{font-size:.68rem;color:#fff;padding:.2rem .55rem;border-radius:99px;font-weight:600;white-space:nowrap;display:inline-block}
+.record-badge{font-size:.68rem;color:#fbbf24;background:rgba(251,191,36,.1);padding:.15rem .5rem;border-radius:6px;font-weight:500;white-space:nowrap}
+.ex-block{background:var(--card);border-radius:10px;padding:.8rem;margin-bottom:.6rem;border:1px solid var(--line)}
+.ex-header{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:.4rem}
+.ex-name{font-weight:600}
+.ex-note{font-size:.78rem;color:var(--muted);font-style:italic;margin-bottom:.4rem;padding:.3rem .5rem;background:rgba(255,255,255,.04);border-radius:7px}
+.set-row{font-size:.85rem;color:#c0c4ce;padding:.15rem 0 .15rem .6rem;border-left:2px solid var(--line)}
 </style>
 <header>
 <div class="header-left"><img class="header-logo" src="/stickfigure.png" alt="OpenLyfta"></div>
@@ -153,23 +160,36 @@ async function load(){
   }
 }
 
+var EX_TYPES={'weight_reps':{l:'Weight × Reps',c:'#3b82f6'},'db_1_both_sides':{l:'1 DB · Both Sides',c:'#a855f7'},'db_2_simultaneous':{l:'2 Dumbbells',c:'#a855f7'},'db_1':{l:'1 Dumbbell',c:'#a855f7'},'bodyweight':{l:'Bodyweight',c:'#22c55e'},'bodyweight_assisted':{l:'Bodyweight Assisted',c:'#22c55e'},'duration':{l:'Duration',c:'#f59e0b'},'distance':{l:'Distance',c:'#f59e0b'},'reps_only':{l:'Reps Only',c:'#6b7280'}};
+var REC_TYPES={'1':'Est. 1RM','2':'Max Weight','3':'Max Set Volume','4':'Max Reps'};
+function fmtW2(w){var n=parseFloat(w)||0;var v=_wu==='lbs'?n*2.20462:n;var r=Math.round(v*10)/10;return(r%1===0?String(Math.round(r)):String(r))+(_wu==='lbs'?'lbs':'kg');}
+function parseRecs(s){if(!s.record_type||!s.record_value)return[];var ts=String(s.record_type).split(',');var vs=String(s.record_value).split(',');var out=[];for(var i=0;i<ts.length;i++){var lb=REC_TYPES[ts[i].trim()];if(!lb)continue;var rv=vs[i]?vs[i].trim():'';var nv=parseFloat(rv);var dp=isNaN(nv)?rv:(nv%1===0?String(Math.round(nv)):String(nv));out.push({label:lb,value:dp});}return out;}
+
 async function view(id, src){
   try{
     var w=await api('/api/workouts/'+id);
     var exhtml=(w.exercises||[]).map(function(e){
+      var ti=EX_TYPES[e.exercise_type]||{l:e.exercise_type||'',c:'#6b7280'};
+      var badge=ti.l?'<span class="type-badge" style="background:'+ti.c+'">'+ti.l+'</span>':'';
+      var note=e.exercise_note?'<div class="ex-note">📝 '+e.exercise_note+'</div>':'';
       var setsHtml=(e.sets||[]).map(function(s){
-        return '<li>'+(s.weight?'<b>'+kgToUnit(s.weight)+' '+_wu+'</b> · ':'')+(s.reps?s.reps+' reps':'')+(s.duration?s.duration:'')+(s.record_value?' <span class="tag">🏆 '+s.record_value+'</span>':'')+'</li>';
+        var parts=[];
+        if(s.weight&&parseFloat(s.weight)>0)parts.push('<b>'+fmtW2(s.weight)+'</b>');
+        if(s.reps)parts.push(s.reps+' reps');
+        if(s.duration)parts.push(s.duration);
+        if(s.distance)parts.push(s.distance);
+        var recs=parseRecs(s);
+        var recHtml=recs.length?' '+recs.map(function(r){return '<span class="record-badge">🏆 '+r.label+': '+r.value+'</span>';}).join(' '):'';
+        return '<div class="set-row">'+parts.join(' · ')+recHtml+'</div>';
       }).join('');
-      return '<li><b>'+e.excercise_name+'</b> <span class="tag">'+(e.exercise_type||'')+'</span>'
-        +(e.exercise_note?'<br><span class="tag">📝 '+e.exercise_note+'</span>':'')
-        +'<ul>'+setsHtml+'</ul></li>';
+      return '<div class="ex-block"><div class="ex-header"><span class="ex-name">'+e.excercise_name+'</span>'+badge+'</div>'+note+'<div class="sets">'+setsHtml+'</div></div>';
     }).join('');
 
     var imgSrc=src||('/api/workouts/'+id+'/card.jpg');
     $('#dlgBody').innerHTML='<div class="cardrepos"><img class="modalimg" src="'+imgSrc+'" style="max-width:46%"></div>'
       +'<h3>'+cleanTitle(w.title)+'</h3><p class="tag">#'+w.workout_number+' · '+fmt(w.workout_perform_date)+'</p>'
       +'<div style="margin:.5rem 0 1rem"><a class="btn" href="/share/'+id+'" target="_blank" style="text-decoration:none;font-size:.78rem">🔗 Shareable link</a></div>'
-      +'<ul>'+exhtml+'</ul>'
+      +exhtml
       +'<div style="text-align:right;margin-top:1rem"><button class="btn" onclick="closeDlg()">Close</button></div>';
     $('#dlg').showModal();
   } catch(e){
