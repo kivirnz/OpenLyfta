@@ -40,9 +40,14 @@ class Multipart {
   }
 }
 
+function cleanTitle(t) {
+  return String(t || '').replace(/\\u([0-9a-fA-F]{4})/g, (_, c) => String.fromCharCode(parseInt(c, 16)));
+}
+
 const TOKENS = {
   date: (w) => (w.workout_perform_date || w.create_date || '').slice(0, 16).replace('T', ' '),
-  workoutname: (w) => w.title || '',
+  workoutname: (w) => cleanTitle(w.title || ''),
+  title: (w) => cleanTitle(w.title || ''),
   duration: (w) => w.workout_duration || '',
   volume: (w, _s, unit) => {
     const n = Math.round(+(w.total_volume || w.totalLiftedWeight || 0));
