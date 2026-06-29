@@ -44,6 +44,10 @@ function cleanTitle(t) {
   return String(t || '').replace(/\\u([0-9a-fA-F]{4})/g, (_, c) => String.fromCharCode(parseInt(c, 16)));
 }
 
+function htmlEscape(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 const TOKENS = {
   date: (w) => (w.workout_perform_date || w.create_date || '').slice(0, 16).replace('T', ' '),
   workoutname: (w) => cleanTitle(w.title || ''),
@@ -72,9 +76,9 @@ const TOKENS = {
 
 function renderTemplate(tpl, workout, sets, unit, opts) {
   return (tpl || '').replace(/<([a-zA-Z0-9_]+)>/g, (_, k) => {
-    if (k.toLowerCase() === 'sharelink') return (opts && opts.shareUrl) ? opts.shareUrl : '';
+    if (k.toLowerCase() === 'sharelink') return (opts && opts.shareUrl) ? htmlEscape(opts.shareUrl) : '';
     const fn = TOKENS[k.toLowerCase()];
-    return fn ? String(fn(workout, sets, unit) || '') : `<${k}>`;
+    return fn ? htmlEscape(String(fn(workout, sets, unit) || '')) : `<${k}>`;
   });
 }
 
@@ -84,7 +88,13 @@ async function sendCard({ botToken, chatId, cardPath, caption, workout, totalSet
   form.field('chat_id', chatId);
   form.file('photo', path.basename(cardPath), 'image/jpeg', fs.readFileSync(cardPath));
   if (cap) form.field('caption', cap.length > 1024 ? cap.slice(0, 1021) + '...' : cap);
+  form.field('parse_mode', 'HTML');
   const r = await tgRequest(botToken, 'sendPhoto', form);
+  if (r.status === 429) {
+    const j = JSON.parse(r.body || '{}');
+    const retryAfter = (j.parameters && j.parameters.retry_after) || 3;
+    throw new Error(`Telegram rate limited, retry after ${retryAfter}s`);
+  }
   if (r.status >= 400) throw new Error(`Telegram sendPhoto ${r.status}: ${r.body}`);
   return true;
 }

@@ -122,8 +122,11 @@ class Pipeliner {
     this.store.markTelegramSent(workoutId);
   }
 
+  _sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
   // Send ALL workouts (including already-sent) to Telegram. Used for bulk history import.
   // If resetSent is true, marks all workouts as unsent first (so they will all be queued).
+  // Sends oldest-first (chronological order) with a delay between each to respect rate limits.
   async sendAllToTelegram({ resetSent = false } = {}) {
     const tgBotToken = this.store.setting('telegram_bot_token');
     const tgChatId = this.store.setting('telegram_chat_id');
@@ -133,15 +136,32 @@ class Pipeliner {
     const queue = this.store.telegramAll();
     let sent = 0;
     let failed = 0;
-    this.logger.log(`[pipeline] sending ${queue.length} workouts to Telegram`);
+    this.logger.log(`[pipeline] sending ${queue.length} workouts to Telegram (oldest first)`);
     for (const w of queue) {
       try {
         if (!w.card_path || !fs.existsSync(w.card_path)) {
           await this.generateForWorkoutId(w.id);
         }
-        await this._sendWorkoutToTelegram(w.id, tgBotToken, tgChatId, captionTpl);
+        let retries = 0;
+        while (retries < 3) {
+          try {
+            await this._sendWorkoutToTelegram(w.id, tgBotToken, tgChatId, captionTpl);
+            break;
+          } catch (e) {
+            if (e.message.includes('rate limited') && retries < 2) {
+              const wait = e.message.match(/retry after (\d+)s/);
+              const delay = wait ? (parseInt(wait[1], 10) + 1) * 1000 : 5000;
+              this.logger.warn(`[pipeline] rate limited, waiting ${delay}ms before retry`);
+              await this._sleep(delay);
+              retries++;
+            } else {
+              throw e;
+            }
+          }
+        }
         sent++;
         this.logger.log(`[pipeline] sent workout ${w.id} (${sent}/${queue.length})`);
+        await this._sleep(1500);
       } catch (e) {
         failed++;
         this.logger.warn(`[pipeline] telegram send failed for ${w.id}: ${e.message}`);
