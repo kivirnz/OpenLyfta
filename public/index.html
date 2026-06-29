@@ -77,6 +77,7 @@ async function api(p,o){
 }
 function fmt(d){return (d||'').replace('T',' ').slice(0,16);}
 function cleanTitle(t){if(!t)return 'Untitled';return t.replace(/\\u([0-9a-fA-F]{4})/g,function(_,c){return String.fromCharCode(parseInt(c,16));});}
+function decodeText(t){return cleanTitle(t);}
 function cleanType(t){if(!t||t==='PERFORM_WORKOUT_TEMPLATE'||t==='PERFORM_WORKOUT')return'';return t.replace(/_/g,' ').toLowerCase();}
 var _wu='kg';
 function kgToUnit(n){n=+n||0;return _wu==='lbs'?Math.round(n*2.20462):n;}
@@ -171,7 +172,7 @@ async function view(id, src){
     var exhtml=(w.exercises||[]).map(function(e){
       var ti=EX_TYPES[e.exercise_type]||{l:e.exercise_type||'',c:'#6b7280'};
       var badge=ti.l?'<span class="type-badge" style="background:'+ti.c+'">'+ti.l+'</span>':'';
-      var note=e.exercise_note?'<div class="ex-note">📝 '+e.exercise_note+'</div>':'';
+      var note=e.exercise_note?'<div class="ex-note">📝 '+decodeText(e.exercise_note)+'</div>':'';
       var setsHtml=(e.sets||[]).map(function(s,idx){
         var parts=[];
         if(s.weight&&parseFloat(s.weight)>0)parts.push('<b>'+fmtW2(s.weight)+'</b>');
@@ -182,7 +183,7 @@ async function view(id, src){
         var recHtml=recs.length?' '+recs.map(function(r){return '<span class="record-badge">🏆 '+r.label+': '+r.value+'</span>';}).join(' '):'';
         return '<div class="set-row"><span style="color:var(--muted);font-weight:600;font-size:.72rem;min-width:22px;display:inline-block">#'+(idx+1)+'</span> '+parts.join(' · ')+recHtml+'</div>';
       }).join('');
-      return '<div class="ex-block"><div class="ex-header"><span class="ex-name">'+e.excercise_name+'</span>'+badge+'</div>'+note+'<div class="sets">'+setsHtml+'</div></div>';
+      return '<div class="ex-block"><div class="ex-header"><span class="ex-name">'+decodeText(e.excercise_name)+'</span>'+badge+'</div>'+note+'<div class="sets">'+setsHtml+'</div></div>';
     }).join('');
 
     var imgSrc=src||('/api/workouts/'+id+'/card.jpg');

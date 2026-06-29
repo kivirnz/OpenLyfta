@@ -1,8 +1,12 @@
 'use strict';
 
+function decodeUnicode(t) {
+  return String(t || '').replace(/\\u([0-9a-fA-F]{4})/g, (_, c) => String.fromCharCode(parseInt(c, 16)));
+}
+
 function cleanTitle(t) {
   if (!t) return 'Untitled Workout';
-  return t.replace(/\\u([0-9a-fA-F]{4})/g, (_, c) => String.fromCharCode(parseInt(c, 16)));
+  return decodeUnicode(t);
 }
 
 function fmtDate(d) {
@@ -82,10 +86,10 @@ function renderSet(set, unit, setNum) {
 function renderExercise(ex, unit) {
   const typeInfo = EXERCISE_TYPES[ex.exercise_type] || { label: ex.exercise_type || '', color: '#6b7280' };
   const badgeHtml = typeInfo.label ? '<span class="type-badge" style="background:' + typeInfo.color + '">' + esc(typeInfo.label) + '</span>' : '';
-  const noteHtml = ex.exercise_note ? '<div class="ex-note">📝 ' + esc(ex.exercise_note) + '</div>' : '';
+  const noteHtml = ex.exercise_note ? '<div class="ex-note">📝 ' + esc(decodeUnicode(ex.exercise_note)) + '</div>' : '';
   const setsHtml = (ex.sets || []).map((s, i) => renderSet(s, unit, i + 1)).join('');
   return '<div class="exercise">'
-    + '<div class="ex-header"><span class="ex-name">' + esc(ex.excercise_name || 'Exercise') + '</span>' + badgeHtml + '</div>'
+    + '<div class="ex-header"><span class="ex-name">' + esc(decodeUnicode(ex.excercise_name || 'Exercise')) + '</span>' + badgeHtml + '</div>'
     + noteHtml
     + '<div class="sets">' + setsHtml + '</div>'
     + '</div>';
