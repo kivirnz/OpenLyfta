@@ -38,16 +38,14 @@ function apiRouter({ store, pipeliner, config }) {
 
   router.post('/workouts/:id/send-telegram', async (req, res) => {
     try {
-      const full = store.getWorkout(Number(req.params.id));
-      if (!full.card_path) await pipeliner.generateForWorkoutId(full.id);
+      const wid = Number(req.params.id);
+      const full = store.getWorkout(wid);
+      if (!full.card_path) await pipeliner.generateForWorkoutId(wid);
       const token = store.setting('telegram_bot_token');
       const chatId = store.setting('telegram_chat_id');
       const cap = store.setting('telegram_caption') || '';
       if (!token || !chatId) return res.status(400).json({ error: 'Telegram not configured' });
-      const { sendCard } = require('../telegram/bot');
-      const { setCount } = require('../lib/pipeline');
-      await sendCard({ botToken: token, chatId, cardPath: store.getWorkout(full.id).card_path, caption: cap, workout: store.getWorkout(full.id), totalSets: setCount(store.getWorkout(full.id)) });
-      store.markTelegramSent(full.id);
+      await pipeliner._sendWorkoutToTelegram(wid, token, chatId, cap);
       res.json({ ok: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
@@ -101,10 +99,7 @@ function apiRouter({ store, pipeliner, config }) {
       const last = store.getWorkouts({ limit: 1 })[0];
       if (!last) return res.status(404).json({ error: 'no workouts to test with' });
       if (!last.card_path) await pipeliner.generateForWorkoutId(last.id);
-      const full = store.getWorkout(last.id);
-      const { sendCard } = require('../telegram/bot');
-      const { setCount } = require('../lib/pipeline');
-      await sendCard({ botToken: token, chatId, cardPath: full.card_path, caption: cap, workout: full, totalSets: setCount(full) });
+      await pipeliner._sendWorkoutToTelegram(last.id, token, chatId, cap);
       res.json({ ok: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });

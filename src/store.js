@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS workouts (
   picture_url TEXT,
   picture_path TEXT,
   card_path TEXT,
+  card_paths_json TEXT,
   raw_json TEXT,
   synced_at INTEGER,
   telegram_sent INTEGER DEFAULT 0
@@ -143,6 +144,7 @@ class Store {
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
     this.db.exec(SCHEMA);
+    try { this.db.exec('ALTER TABLE workouts ADD COLUMN card_paths_json TEXT'); } catch {}
     this._stmts = {};
   }
 
@@ -293,7 +295,10 @@ class Store {
   }
 
   setWorkoutPicturePath(id, p) { this._prepare('UPDATE workouts SET picture_path=? WHERE id=?').run(p, id); }
-  setWorkoutCardPath(id, p) { this._prepare('UPDATE workouts SET card_path=? WHERE id=?').run(p, id); }
+  setWorkoutCardPath(id, p, allPaths) {
+    this._prepare('UPDATE workouts SET card_path=?, card_paths_json=? WHERE id=?')
+      .run(p, allPaths ? JSON.stringify(allPaths) : null, id);
+  }
   markTelegramSent(id) { this._prepare('UPDATE workouts SET telegram_sent=1 WHERE id=?').run(id); }
   resetTelegramSent() { this._prepare('UPDATE workouts SET telegram_sent=0').run(); }
   telegramUnsent() { return this._prepare('SELECT * FROM workouts WHERE telegram_sent=0 AND card_path IS NOT NULL ORDER BY workout_perform_date ASC').all(); }

@@ -51,7 +51,7 @@ class Pipeliner {
   }
 
   async _generateCollageForWorkout(workout) {
-    const exercises = (workout.exercises || []).filter((e) => e.exercise_image).slice(0, 9);
+    const exercises = (workout.exercises || []).filter((e) => e.exercise_image);
     if (!exercises.length) throw new Error(`workout ${workout.id} has no picture and no exercise images for collage`);
     const exerciseDir = path.join(this.config.MEDIA_DIR || path.join(process.cwd(), 'data', 'media'), 'exercise');
     fs.mkdirSync(exerciseDir, { recursive: true });
@@ -75,9 +75,10 @@ class Pipeliner {
     }
     if (!imageBuffers.length) throw new Error(`workout ${workout.id} could not download any exercise images for collage`);
     const outPath = path.join(this.cardDir, `${workout.id}.jpg`);
-    await generateCollage(workout, { exerciseImages: imageBuffers, outPath, logger: this.logger });
-    this.store.setWorkoutCardPath(workout.id, outPath);
-    return outPath;
+    const allPaths = await generateCollage(workout, { exerciseImages: imageBuffers, outPath, logger: this.logger });
+    const primaryPath = allPaths[0];
+    this.store.setWorkoutCardPath(workout.id, primaryPath, allPaths);
+    return primaryPath;
   }
 
   async drainTelegram() {
@@ -93,15 +94,28 @@ class Pipeliner {
         if (!w.card_path) {
           await this.generateForWorkoutId(w.id);
         }
-        const full = this.store.getWorkout(w.id);
-        await sendCard({ botToken: tgBotToken, chatId: tgChatId, cardPath: full.card_path, caption: captionTpl, workout: full, totalSets: setCount(full) });
-        this.store.markTelegramSent(w.id);
+        await this._sendWorkoutToTelegram(w.id, tgBotToken, tgChatId, captionTpl);
         sent++;
       } catch (e) {
         this.logger.warn(`[pipeline] telegram send failed for ${w.id}: ${e.message}`);
       }
     }
     return { sent };
+  }
+
+  async _sendWorkoutToTelegram(workoutId, botToken, chatId, captionTpl) {
+    const full = this.store.getWorkout(workoutId);
+    if (!full.card_path) throw new Error(`workout ${workoutId} has no card`);
+    let paths = [full.card_path];
+    if (full.card_paths_json) {
+      try { const parsed = JSON.parse(full.card_paths_json); if (Array.isArray(parsed) && parsed.length) paths = parsed; } catch {}
+    }
+    for (let i = 0; i < paths.length; i++) {
+      if (!fs.existsSync(paths[i])) throw new Error(`card file missing: ${paths[i]}`);
+      const cap = i === 0 ? captionTpl : '';
+      await sendCard({ botToken: botToken, chatId, cardPath: paths[i], caption: cap, workout: full, totalSets: setCount(full) });
+    }
+    this.store.markTelegramSent(workoutId);
   }
 
   // Send ALL workouts (including already-sent) to Telegram. Used for bulk history import.
@@ -118,13 +132,10 @@ class Pipeliner {
     this.logger.log(`[pipeline] sending ${queue.length} workouts to Telegram`);
     for (const w of queue) {
       try {
-        if (!w.card_path || !require('node:fs').existsSync(w.card_path)) {
+        if (!w.card_path || !fs.existsSync(w.card_path)) {
           await this.generateForWorkoutId(w.id);
         }
-        const full = this.store.getWorkout(w.id);
-        if (!full.card_path) { failed++; continue; }
-        await sendCard({ botToken: tgBotToken, chatId: tgChatId, cardPath: full.card_path, caption: captionTpl, workout: full, totalSets: setCount(full) });
-        this.store.markTelegramSent(w.id);
+        await this._sendWorkoutToTelegram(w.id, tgBotToken, tgChatId, captionTpl);
         sent++;
         this.logger.log(`[pipeline] sent workout ${w.id} (${sent}/${queue.length})`);
       } catch (e) {

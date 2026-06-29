@@ -5,6 +5,7 @@ const sharp = require('sharp');
 const { muscleById } = require('./muscles');
 
 const LOGO_PATH = path.join(__dirname, '..', '..', 'assets', 'img', 'transparent.png');
+const TEXT_LOGO_PATH = path.join(__dirname, '..', '..', 'assets', 'img', 'logo_text.png');
 
 const BODY_DIR = path.join(__dirname, '..', '..', 'assets', 'bodymaps');
 function basePaths(gender) {
@@ -224,55 +225,80 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
   return outPath;
 }
 
-// Generate a 3x3 exercise collage card for workouts without a picture.
+// Generate 3x3 exercise collage card(s) for workouts without a picture.
+// Returns array of output paths (one per 9 exercises).
 // exerciseImages: array of { buf, name, sets }
 async function generateCollage(workout, { exerciseImages, outPath, logger = console } = {}) {
-  const PW = 1080, PH = 1434;
+  const PW = 1080;
   const cols = 3, rows = 3;
   const padding = 24;
   const gap = 12;
+  const logoH = 80;
+  const gridH = 1434;
+  const PH = gridH + logoH;
   const cellW = Math.floor((PW - padding * 2 - gap * (cols - 1)) / cols);
-  const cellH = Math.floor((PH - padding * 2 - gap * (rows - 1)) / rows);
+  const cellH = Math.floor((gridH - padding * 2 - gap * (rows - 1)) / rows);
   const imgH = Math.round(cellH * 0.74);
   const textH = cellH - imgH;
 
-  const items = exerciseImages.slice(0, 9);
-  const comps = [];
-
-  for (let i = 0; i < items.length; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    const x = padding + col * (cellW + gap);
-    const y = padding + row * (cellH + gap);
-
-    const item = items[i];
-    let imgBuf;
-    try {
-      imgBuf = await sharp(item.buf)
-        .resize({ width: cellW, height: imgH, fit: 'cover', position: 'center' })
-        .png().toBuffer();
-    } catch { continue; }
-    comps.push({ input: imgBuf, blend: 'over', left: x, top: y });
-
-    let label = `${item.sets} × ${item.name}`;
-    const maxChars = Math.floor(cellW / 11);
-    if (label.length > maxChars) label = label.slice(0, maxChars - 1) + '…';
-    const fontSize = Math.min(22, Math.max(16, Math.floor(cellW / label.length * 1.8)));
-    const textSvg = Buffer.from(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="${cellW}" height="${textH}">
-        <text x="${cellW / 2}" y="${textH / 2 + fontSize / 3}" text-anchor="middle" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="${fontSize}" fill="#ffffff" font-weight="600">${esc(label)}</text>
-      </svg>`);
-    comps.push({ input: textSvg, blend: 'over', left: x, top: y + imgH });
+  const perPage = cols * rows;
+  const pages = [];
+  for (let i = 0; i < exerciseImages.length; i += perPage) {
+    pages.push(exerciseImages.slice(i, i + perPage));
   }
 
-  const out = await sharp({ create: { width: PW, height: PH, channels: 4, background: { r: 17, g: 19, b: 23, alpha: 1 } } })
-    .composite(comps)
-    .jpeg({ quality: 92 }).toBuffer();
+  const outPaths = [];
+  for (let p = 0; p < pages.length; p++) {
+    const items = pages[p];
+    const comps = [];
 
-  fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, out);
-  logger.log(`[collage] wrote ${outPath} (${PW}x${PH})`);
-  return outPath;
+    for (let i = 0; i < items.length; i++) {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const x = padding + col * (cellW + gap);
+      const y = padding + row * (cellH + gap);
+
+      const item = items[i];
+      let imgBuf;
+      try {
+        imgBuf = await sharp(item.buf)
+          .resize({ width: cellW, height: imgH, fit: 'cover', position: 'center' })
+          .png().toBuffer();
+      } catch { continue; }
+      comps.push({ input: imgBuf, blend: 'over', left: x, top: y });
+
+      let label = `${item.sets} × ${item.name}`;
+      const maxChars = Math.floor(cellW / 11);
+      if (label.length > maxChars) label = label.slice(0, maxChars - 1) + '…';
+      const fontSize = Math.min(22, Math.max(16, Math.floor(cellW / label.length * 1.8)));
+      const textSvg = Buffer.from(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="${cellW}" height="${textH}">
+          <text x="${cellW / 2}" y="${textH / 2 + fontSize / 3}" text-anchor="middle" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="${fontSize}" fill="#ffffff" font-weight="600">${esc(label)}</text>
+        </svg>`);
+      comps.push({ input: textSvg, blend: 'over', left: x, top: y + imgH });
+    }
+
+    if (fs.existsSync(TEXT_LOGO_PATH)) {
+      const logoMeta = await sharp(TEXT_LOGO_PATH).metadata();
+      const targetH = 48;
+      const scale = targetH / logoMeta.height;
+      const logoW = Math.round(logoMeta.width * scale);
+      const logo = await sharp(TEXT_LOGO_PATH).resize(logoW, targetH, { fit: 'inside' }).png().toBuffer();
+      comps.push({ input: logo, blend: 'over', left: PW - logoW - 24, top: gridH + (logoH - targetH) / 2 });
+    }
+
+    const pagePath = pages.length > 1 ? outPath.replace(/\.jpg$/, `_${p + 1}.jpg`) : outPath;
+    const out = await sharp({ create: { width: PW, height: PH, channels: 4, background: { r: 17, g: 19, b: 23, alpha: 1 } } })
+      .composite(comps)
+      .jpeg({ quality: 92 }).toBuffer();
+
+    fs.mkdirSync(path.dirname(pagePath), { recursive: true });
+    fs.writeFileSync(pagePath, out);
+    outPaths.push(pagePath);
+    logger.log(`[collage] wrote ${pagePath} (${PW}x${PH})`);
+  }
+
+  return outPaths;
 }
 
 module.exports = { generateCard, generateCollage, hexToRgb, fmtVolume };
