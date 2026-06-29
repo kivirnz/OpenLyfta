@@ -172,7 +172,7 @@ async function view(id, src){
       var ti=EX_TYPES[e.exercise_type]||{l:e.exercise_type||'',c:'#6b7280'};
       var badge=ti.l?'<span class="type-badge" style="background:'+ti.c+'">'+ti.l+'</span>':'';
       var note=e.exercise_note?'<div class="ex-note">📝 '+e.exercise_note+'</div>':'';
-      var setsHtml=(e.sets||[]).map(function(s){
+      var setsHtml=(e.sets||[]).map(function(s,idx){
         var parts=[];
         if(s.weight&&parseFloat(s.weight)>0)parts.push('<b>'+fmtW2(s.weight)+'</b>');
         if(s.reps)parts.push(s.reps+' reps');
@@ -180,7 +180,7 @@ async function view(id, src){
         if(s.distance)parts.push(s.distance);
         var recs=parseRecs(s);
         var recHtml=recs.length?' '+recs.map(function(r){return '<span class="record-badge">🏆 '+r.label+': '+r.value+'</span>';}).join(' '):'';
-        return '<div class="set-row">'+parts.join(' · ')+recHtml+'</div>';
+        return '<div class="set-row"><span style="color:var(--muted);font-weight:600;font-size:.72rem;min-width:22px;display:inline-block">#'+(idx+1)+'</span> '+parts.join(' · ')+recHtml+'</div>';
       }).join('');
       return '<div class="ex-block"><div class="ex-header"><span class="ex-name">'+e.excercise_name+'</span>'+badge+'</div>'+note+'<div class="sets">'+setsHtml+'</div></div>';
     }).join('');

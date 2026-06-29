@@ -63,7 +63,7 @@ function parseRecords(set) {
   return result;
 }
 
-function renderSet(set, unit) {
+function renderSet(set, unit, setNum) {
   const parts = [];
   if (set.weight && parseFloat(set.weight) > 0) parts.push('<b>' + esc(fmtWeight(set.weight, unit)) + '</b>');
   if (set.reps) parts.push(esc(set.reps) + ' reps');
@@ -76,14 +76,14 @@ function renderSet(set, unit) {
     recHtml = ' ' + records.map((r) => '<span class="record-badge" title="' + esc(r.label) + ' PR">🏆 ' + esc(r.label) + ': ' + esc(r.value) + '</span>').join(' ');
   }
 
-  return '<div class="set-row">' + parts.join(' · ') + recHtml + '</div>';
+  return '<div class="set-row"><span class="set-num">#' + setNum + '</span> ' + parts.join(' · ') + recHtml + '</div>';
 }
 
 function renderExercise(ex, unit) {
   const typeInfo = EXERCISE_TYPES[ex.exercise_type] || { label: ex.exercise_type || '', color: '#6b7280' };
   const badgeHtml = typeInfo.label ? '<span class="type-badge" style="background:' + typeInfo.color + '">' + esc(typeInfo.label) + '</span>' : '';
   const noteHtml = ex.exercise_note ? '<div class="ex-note">📝 ' + esc(ex.exercise_note) + '</div>' : '';
-  const setsHtml = (ex.sets || []).map((s) => renderSet(s, unit)).join('');
+  const setsHtml = (ex.sets || []).map((s, i) => renderSet(s, unit, i + 1)).join('');
   return '<div class="exercise">'
     + '<div class="ex-header"><span class="ex-name">' + esc(ex.excercise_name || 'Exercise') + '</span>' + badgeHtml + '</div>'
     + noteHtml
@@ -149,9 +149,10 @@ function renderSharePage(workout, opts) {
     + '.ex-note{font-size:.8rem;color:var(--muted);margin-bottom:.5rem;font-style:italic;padding:.4rem .6rem;background:rgba(255,255,255,.04);border-radius:8px}'
     + '.sets{display:flex;flex-direction:column;gap:.35rem}'
     + '.set-row{font-size:.9rem;color:#c0c4ce;padding:.2rem 0 .2rem .8rem;border-left:2px solid var(--line)}'
+    + '.set-num{color:var(--muted);font-weight:600;font-size:.78rem;min-width:24px;display:inline-block}'
     + '.record-badge{font-size:.72rem;color:#fbbf24;background:rgba(251,191,36,.1);padding:.15rem .5rem;border-radius:6px;font-weight:500;margin-left:.3rem;white-space:nowrap}'
     + '.footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem}'
-    + '.footer a{color:var(--acc);text-decoration:none}'
+    + '.footer a{color:#3b82f6;text-decoration:none}'
     + '</style>'
     + '<div class="container">'
     + (cardImg ? '<div class="card-wrap"><img src="' + esc(cardImg) + '" alt="' + esc(title) + '"></div>' : '')
