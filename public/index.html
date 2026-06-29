@@ -161,7 +161,7 @@ async function load(){
   }
 }
 
-var EX_TYPES={'weight_reps':{l:'Weight × Reps',c:'#3b82f6'},'db_1_both_sides':{l:'1 DB · Both Sides',c:'#a855f7'},'db_2_simultaneous':{l:'2 Dumbbells',c:'#a855f7'},'db_1':{l:'1 Dumbbell',c:'#a855f7'},'bodyweight':{l:'Bodyweight',c:'#22c55e'},'bodyweight_assisted':{l:'Bodyweight Assisted',c:'#22c55e'},'duration':{l:'Duration',c:'#f59e0b'},'distance':{l:'Distance',c:'#f59e0b'},'reps_only':{l:'Reps Only',c:'#6b7280'}};
+var EX_TYPES={'weight_reps':{l:'Weight × Reps',c:'#3b82f6'},'db_1_both_sides':{l:'1 DB · Both Sides',c:'#a855f7'},'db_2_simultaneous':{l:'2 Dumbbells',c:'#a855f7'},'db_1':{l:'1 Dumbbell',c:'#a855f7'},'bodyweight':{l:'Bodyweight',c:'#22c55e'},'bodyweight_assisted':{l:'Bodyweight Assisted',c:'#22c55e'},'duration':{l:'Duration',c:'#f59e0b'},'distance':{l:'Distance',c:'#f59e0b'},'distance_duration':{l:'Distance · Duration',c:'#f59e0b'},'reps_only':{l:'Reps Only',c:'#6b7280'}};
 var REC_TYPES={'1':'Est. 1RM','2':'Max Weight','3':'Max Set Volume','4':'Max Reps'};
 function fmtW2(w){var n=parseFloat(w)||0;var v=_wu==='lbs'?n*2.20462:n;var r=Math.round(v*10)/10;return(r%1===0?String(Math.round(r)):String(r))+(_wu==='lbs'?'lbs':'kg');}
 function parseRecs(s){if(!s.record_type||!s.record_value)return[];var ts=String(s.record_type).split(',');var vs=String(s.record_value).split(',');var out=[];for(var i=0;i<ts.length;i++){var lb=REC_TYPES[ts[i].trim()];if(!lb)continue;var rv=vs[i]?vs[i].trim():'';var nv=parseFloat(rv);var dp=isNaN(nv)?rv:(nv%1===0?String(Math.round(nv)):String(nv));out.push({label:lb,value:dp});}return out;}
@@ -178,7 +178,7 @@ async function view(id, src){
         if(s.weight&&parseFloat(s.weight)>0)parts.push('<b>'+fmtW2(s.weight)+'</b>');
         if(s.reps)parts.push(s.reps+' reps');
         if(s.duration)parts.push(s.duration);
-        if(s.distance)parts.push(s.distance);
+        if(s.distance)parts.push(s.distance+'km');
         var recs=parseRecs(s);
         var recHtml=recs.length?' '+recs.map(function(r){return '<span class="record-badge">🏆 '+r.label+': '+r.value+'</span>';}).join(' '):'';
         return '<div class="set-row"><span style="color:var(--muted);font-weight:600;font-size:.72rem;min-width:22px;display:inline-block">#'+(idx+1)+'</span> '+parts.join(' · ')+recHtml+'</div>';

@@ -37,6 +37,7 @@ const EXERCISE_TYPES = {
   bodyweight_assisted: { label: 'Bodyweight Assisted', color: '#22c55e' },
   duration: { label: 'Duration', color: '#f59e0b' },
   distance: { label: 'Distance', color: '#f59e0b' },
+  distance_duration: { label: 'Distance · Duration', color: '#f59e0b' },
   reps_only: { label: 'Reps Only', color: '#6b7280' },
 };
 
@@ -72,7 +73,7 @@ function renderSet(set, unit, setNum) {
   if (set.weight && parseFloat(set.weight) > 0) parts.push('<b>' + esc(fmtWeight(set.weight, unit)) + '</b>');
   if (set.reps) parts.push(esc(set.reps) + ' reps');
   if (set.duration) parts.push(esc(set.duration));
-  if (set.distance) parts.push(esc(set.distance));
+  if (set.distance) parts.push(esc(set.distance) + 'km');
 
   const records = parseRecords(set);
   let recHtml = '';
