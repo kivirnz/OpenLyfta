@@ -22,10 +22,6 @@ function hexToRgb(h) {
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 
-function mix(rgb, f = 0.5) {
-  return { r: Math.round(rgb.r * f + 128 * (1 - f)), g: Math.round(rgb.g * f + 128 * (1 - f)), b: Math.round(rgb.b * f + 128 * (1 - f)) };
-}
-
 const _silhouetteCache = new Map();
 async function tintedSilhouette(file, rgb, gender) {
   const key = `${gender}|${file}|${rgb.r},${rgb.g},${rgb.b}`;
@@ -124,9 +120,9 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
   const pic = await sharp(picturePath).metadata();
   const PW = pic.width, PH = pic.height;
 
-  // Always use red for highlighted muscles
+  // Primary muscles red, secondary muscles blue
   const RED = { r: 235, g: 68, b: 90 };
-  const RED_LIGHT = mix(RED, 0.50);
+  const BLUE = { r: 59, g: 130, b: 246 };
   const g = validGender(gender);
 
   // Body figures: 18% -> 30% bigger = ~23.4% of image height
@@ -138,7 +134,7 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
   let frontScaled = null, backScaled = null, frontSm = null;
 
   if (g) {
-    const { frontPng, backPng } = await buildBodyFigure({ primaryIds: primaryMuscleIds, secondaryIds: secondaryMuscleIds, primary: RED, secondaryLight: RED_LIGHT, gender: g });
+    const { frontPng, backPng } = await buildBodyFigure({ primaryIds: primaryMuscleIds, secondaryIds: secondaryMuscleIds, primary: RED, secondaryLight: BLUE, gender: g });
     frontScaled = await sharp(frontPng).resize({ height: targetBodyHeight, fit: 'inside' }).png().toBuffer();
     backScaled = await sharp(backPng).resize({ height: targetBodyHeight, fit: 'inside' }).png().toBuffer();
     frontSm = await sharp(frontScaled).metadata();
