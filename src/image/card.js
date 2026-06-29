@@ -283,7 +283,7 @@ async function generateCollage(workout, { exerciseImages, outPath, logger = cons
       const scale = targetH / logoMeta.height;
       const logoW = Math.round(logoMeta.width * scale);
       const logo = await sharp(LOGO_PATH).resize(logoW, targetH, { fit: 'inside' }).png().toBuffer();
-      comps.push({ input: logo, blend: 'over', left: 24, top: gridH + (logoH - targetH) / 2 });
+      comps.push({ input: logo, blend: 'over', left: 24, top: gridH + (logoH - targetH) / 2 - 8 });
     }
 
     const pagePath = pages.length > 1 ? outPath.replace(/\.jpg$/, `_${p + 1}.jpg`) : outPath;
