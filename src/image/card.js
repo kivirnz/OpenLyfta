@@ -233,9 +233,8 @@ async function generateCollage(workout, { exerciseImages, outPath, logger = cons
   const gap = 12;
   const cellW = Math.floor((PW - padding * 2 - gap * (cols - 1)) / cols);
   const cellH = Math.floor((PH - padding * 2 - gap * (rows - 1)) / rows);
-  const imgH = Math.round(cellH * 0.72);
+  const imgH = Math.round(cellH * 0.74);
   const textH = cellH - imgH;
-  const fs24 = 24;
 
   const items = exerciseImages.slice(0, 9);
   const comps = [];
@@ -250,15 +249,18 @@ async function generateCollage(workout, { exerciseImages, outPath, logger = cons
     let imgBuf;
     try {
       imgBuf = await sharp(item.buf)
-        .resize({ width: cellW, height: imgH, fit: 'contain', background: { r: 25, g: 28, b: 35, alpha: 1 } })
+        .resize({ width: cellW, height: imgH, fit: 'cover', position: 'center' })
         .png().toBuffer();
     } catch { continue; }
     comps.push({ input: imgBuf, blend: 'over', left: x, top: y });
 
-    const label = `${item.sets} × ${item.name}`;
+    let label = `${item.sets} × ${item.name}`;
+    const maxChars = Math.floor(cellW / 11);
+    if (label.length > maxChars) label = label.slice(0, maxChars - 1) + '…';
+    const fontSize = Math.min(22, Math.max(16, Math.floor(cellW / label.length * 1.8)));
     const textSvg = Buffer.from(`
       <svg xmlns="http://www.w3.org/2000/svg" width="${cellW}" height="${textH}">
-        <text x="${cellW / 2}" y="${textH / 2 + fs24 / 3}" text-anchor="middle" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="${fs24}" fill="#ffffff" font-weight="600">${esc(label)}</text>
+        <text x="${cellW / 2}" y="${textH / 2 + fontSize / 3}" text-anchor="middle" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="${fontSize}" fill="#ffffff" font-weight="600">${esc(label)}</text>
       </svg>`);
     comps.push({ input: textSvg, blend: 'over', left: x, top: y + imgH });
   }
