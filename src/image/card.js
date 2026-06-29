@@ -5,7 +5,6 @@ const sharp = require('sharp');
 const { muscleById } = require('./muscles');
 
 const LOGO_PATH = path.join(__dirname, '..', '..', 'assets', 'img', 'transparent.png');
-const TEXT_LOGO_PATH = path.join(__dirname, '..', '..', 'assets', 'img', 'logo_text.png');
 
 const BODY_DIR = path.join(__dirname, '..', '..', 'assets', 'bodymaps');
 function basePaths(gender) {
@@ -278,13 +277,13 @@ async function generateCollage(workout, { exerciseImages, outPath, logger = cons
       comps.push({ input: textSvg, blend: 'over', left: x, top: y + imgH });
     }
 
-    if (fs.existsSync(TEXT_LOGO_PATH)) {
-      const logoMeta = await sharp(TEXT_LOGO_PATH).metadata();
-      const targetH = 48;
+    if (fs.existsSync(LOGO_PATH)) {
+      const logoMeta = await sharp(LOGO_PATH).metadata();
+      const targetH = 96;
       const scale = targetH / logoMeta.height;
       const logoW = Math.round(logoMeta.width * scale);
-      const logo = await sharp(TEXT_LOGO_PATH).resize(logoW, targetH, { fit: 'inside' }).png().toBuffer();
-      comps.push({ input: logo, blend: 'over', left: PW - logoW - 24, top: gridH + (logoH - targetH) / 2 });
+      const logo = await sharp(LOGO_PATH).resize(logoW, targetH, { fit: 'inside' }).png().toBuffer();
+      comps.push({ input: logo, blend: 'over', left: 24, top: gridH + (logoH - targetH) / 2 });
     }
 
     const pagePath = pages.length > 1 ? outPath.replace(/\.jpg$/, `_${p + 1}.jpg`) : outPath;
