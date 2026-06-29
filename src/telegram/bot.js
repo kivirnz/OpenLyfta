@@ -61,15 +61,16 @@ const TOKENS = {
   },
 };
 
-function renderTemplate(tpl, workout, sets, unit) {
+function renderTemplate(tpl, workout, sets, unit, opts) {
   return (tpl || '').replace(/<([a-zA-Z0-9_]+)>/g, (_, k) => {
+    if (k.toLowerCase() === 'sharelink' && opts && opts.shareUrl) return opts.shareUrl;
     const fn = TOKENS[k.toLowerCase()];
     return fn ? String(fn(workout, sets, unit) || '') : `<${k}>`;
   });
 }
 
-async function sendCard({ botToken, chatId, cardPath, caption, workout, totalSets, unit }) {
-  const cap = caption != null ? renderTemplate(caption, workout, totalSets, unit) : '';
+async function sendCard({ botToken, chatId, cardPath, caption, workout, totalSets, unit, shareUrl }) {
+  const cap = caption != null ? renderTemplate(caption, workout, totalSets, unit, { shareUrl }) : '';
   const form = new Multipart();
   form.field('chat_id', chatId);
   form.file('photo', path.basename(cardPath), 'image/jpeg', fs.readFileSync(cardPath));

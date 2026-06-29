@@ -112,10 +112,12 @@ class Pipeliner {
     if (full.card_paths_json) {
       try { const parsed = JSON.parse(full.card_paths_json); if (Array.isArray(parsed) && parsed.length) paths = parsed; } catch {}
     }
+    const pubUrl = this.store.setting('public_url') || '';
+    const shareUrl = pubUrl ? pubUrl.replace(/\/+$/, '') + '/share/' + workoutId : '';
     for (let i = 0; i < paths.length; i++) {
       if (!fs.existsSync(paths[i])) throw new Error(`card file missing: ${paths[i]}`);
       const cap = i === 0 ? captionTpl : '';
-      await sendCard({ botToken: botToken, chatId, cardPath: paths[i], caption: cap, workout: full, totalSets: setCount(full), unit: this._unit() });
+      await sendCard({ botToken: botToken, chatId, cardPath: paths[i], caption: cap, workout: full, totalSets: setCount(full), unit: this._unit(), shareUrl });
     }
     this.store.markTelegramSent(workoutId);
   }

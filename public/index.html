@@ -169,6 +169,7 @@ async function view(id, src){
     var imgSrc=src||('/api/workouts/'+id+'/card.jpg');
     $('#dlgBody').innerHTML='<div class="cardrepos"><img class="modalimg" src="'+imgSrc+'" style="max-width:46%"></div>'
       +'<h3>'+cleanTitle(w.title)+'</h3><p class="tag">#'+w.workout_number+' · '+fmt(w.workout_perform_date)+'</p>'
+      +'<div style="margin:.5rem 0 1rem"><a class="btn" href="/share/'+id+'" target="_blank" style="text-decoration:none;font-size:.78rem">🔗 Shareable link</a></div>'
       +'<ul>'+exhtml+'</ul>'
       +'<div style="text-align:right;margin-top:1rem"><button class="btn" onclick="closeDlg()">Close</button></div>';
     $('#dlg').showModal();
@@ -229,9 +230,10 @@ document.addEventListener('DOMContentLoaded', function(){
     +'<label>Telegram chat id</label><input id="se_tg_chat">'
     +'<label>Send new workouts to Telegram automatically</label><input id="se_tg_enabled" type="checkbox">'
     +'<label>Caption template</label><textarea id="se_caption" rows="6"></textarea>'
-    +'<p class="tag">Tokens: &lt;date&gt; &lt;workoutname&gt; &lt;duration&gt; &lt;volume&gt; &lt;volumeformatted&gt; &lt;totalsets&gt; &lt;exercises&gt; &lt;workoutnumber&gt; &lt;calories&gt; &lt;bodyweight&gt;</p>'
+    +'<p class="tag">Tokens: &lt;date&gt; &lt;workoutname&gt; &lt;duration&gt; &lt;volume&gt; &lt;volumeformatted&gt; &lt;totalsets&gt; &lt;exercises&gt; &lt;workoutnumber&gt; &lt;calories&gt; &lt;bodyweight&gt; &lt;sharelink&gt;</p>'
     +'<label>Sync schedule (cron)</label><input id="se_cron">'
     +'<label>Weight unit</label><select id="se_unit"><option value="kg">kg (kilograms)</option><option value="lbs">lbs (pounds)</option></select>'
+    +'<label>Public URL (for shareable links, e.g. https://openlyfta.example.com)</label><input id="se_puburl" placeholder="https://...">'
     +'<div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn acc" id="seSave">Save</button><button class="btn" id="seTestTg">Test →</button><button class="btn" id="seClose">Close</button></div>'
     +'<hr style="border-color:var(--line);margin:1.2rem 0">'
     +'<h3 style="margin-bottom:.5rem">Logs</h3>'
@@ -250,6 +252,7 @@ document.addEventListener('DOMContentLoaded', function(){
       document.getElementById('se_caption').value=s.telegram_caption||'';
       document.getElementById('se_cron').value=s.sync_cron||'';
       document.getElementById('se_unit').value=s.weight_unit||'kg';
+      document.getElementById('se_puburl').value=s.public_url||'';
     })
     .catch(function(e){showError(e.message);});
     refreshLogs();
@@ -272,7 +275,8 @@ document.addEventListener('DOMContentLoaded', function(){
       telegram_enabled:document.getElementById('se_tg_enabled').checked?'1':'0',
       telegram_caption:document.getElementById('se_caption').value,
       sync_cron:document.getElementById('se_cron').value,
-      weight_unit:document.getElementById('se_unit').value
+      weight_unit:document.getElementById('se_unit').value,
+      public_url:document.getElementById('se_puburl').value
     };
     var pw=document.getElementById('se_password').value;
     if(pw)body.lyfta_password=pw;

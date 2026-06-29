@@ -106,6 +106,20 @@ async function main() {
     res.json({ ok: true });
   });
 
+  // --- Public share page (no auth) ---
+  const { renderSharePage } = require('./share/page');
+  app.get('/share/:id', (req, res) => {
+    const w = store.getWorkout(Number(req.params.id));
+    if (!w) return res.status(404).type('text').send('Workout not found');
+    const unit = store.setting('weight_unit') || 'kg';
+    res.type('html').send(renderSharePage(w, { unit }));
+  });
+  app.get('/share/:id/card.jpg', (req, res) => {
+    const w = store.getWorkout(Number(req.params.id));
+    if (!w || !w.card_path) return res.status(404).end();
+    res.type('image/jpeg').sendFile(w.card_path);
+  });
+
   // --- Protected API routes ---
   app.use('/api', (req, res, next) => authMiddleware(session)(req, res, next), apiRouter({ store, pipeliner, config }));
 
