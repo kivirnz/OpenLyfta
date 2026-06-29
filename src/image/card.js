@@ -317,7 +317,7 @@ async function generateCollage(workout, { exerciseImages, outPath, unit = 'kg', 
         <svg xmlns="http://www.w3.org/2000/svg" width="${PW}" height="${statsH}">
           ${statsLines.map((s, i) => `<text x="${PW - 24}" y="${(i + 1) * statsLineH - 8}" text-anchor="end" font-family="Google Sans, DejaVu Sans, sans-serif" font-size="${statsFS}" fill="#ffffff" font-weight="600">${esc(s)}</text>`).join('\n')}
         </svg>`);
-      comps.push({ input: statsSvg, blend: 'over', left: 0, top: gridH - statsH - 12 });
+      comps.push({ input: statsSvg, blend: 'over', left: 0, top: PH - statsH - 24 });
     }
 
     const pagePath = pages.length > 1 ? outPath.replace(/\.jpg$/, `_${p + 1}.jpg`) : outPath;
