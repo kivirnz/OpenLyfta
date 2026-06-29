@@ -120,9 +120,9 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
   const pic = await sharp(picturePath).metadata();
   const PW = pic.width, PH = pic.height;
 
-  // Primary muscles red, secondary muscles blue
+  // Primary muscles red, secondary muscles lighter red
   const RED = { r: 235, g: 68, b: 90 };
-  const BLUE = { r: 59, g: 130, b: 246 };
+  const RED_LIGHT = { r: 200, g: 120, b: 135 };
   const g = validGender(gender);
 
   // Body figures: 18% -> 30% bigger = ~23.4% of image height
@@ -134,7 +134,7 @@ async function generateCard(workout, { primaryMuscleIds = [], secondaryMuscleIds
   let frontScaled = null, backScaled = null, frontSm = null;
 
   if (g) {
-    const { frontPng, backPng } = await buildBodyFigure({ primaryIds: primaryMuscleIds, secondaryIds: secondaryMuscleIds, primary: RED, secondaryLight: BLUE, gender: g });
+    const { frontPng, backPng } = await buildBodyFigure({ primaryIds: primaryMuscleIds, secondaryIds: secondaryMuscleIds, primary: RED, secondaryLight: RED_LIGHT, gender: g });
     frontScaled = await sharp(frontPng).resize({ height: targetBodyHeight, fit: 'inside' }).png().toBuffer();
     backScaled = await sharp(backPng).resize({ height: targetBodyHeight, fit: 'inside' }).png().toBuffer();
     frontSm = await sharp(frontScaled).metadata();
