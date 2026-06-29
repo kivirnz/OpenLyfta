@@ -59,7 +59,7 @@ input,textarea{width:100%;padding:.6rem;border-radius:9px;border:1px solid var(-
 <div id="errorBox"></div>
 <div id="onboardBox"></div>
 <div class="stats" id="stats"></div>
-<div class="toolbar"><button class="btn" id="regenAllBtn">↻ Regenerate all cards</button><span class="tag" id="regenAllStatus"></span><button class="btn" id="sendAllTgBtn">Send all to Telegram</button><span class="tag" id="sendAllTgStatus"></span></div>
+<div class="toolbar"><button class="btn" id="regenAllBtn">↻ Regenerate all cards</button><span class="tag" id="regenAllStatus"></span><button class="btn" id="sendAllTgBtn">Send all to Telegram</button><span class="tag" id="sendAllTgStatus"></span><button class="btn" id="resetSentBtn">Reset sent badges</button></div>
 <div class="grid" id="grid"></div>
 </div>
 <dialog id="dlg"><div id="dlgBody"></div></dialog>
@@ -238,6 +238,13 @@ document.addEventListener('DOMContentLoaded', function(){
     api('/api/telegram/send-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resetSent:true})})
     .then(function(r){st.textContent='✓ '+r.sent+' sent, '+r.failed+' failed';b.textContent='Send all to Telegram';b.disabled=false;setTimeout(function(){st.textContent='';},10000);load();})
     .catch(function(e){b.textContent='Send all to Telegram';b.disabled=false;alert(e.message);});
+  };
+
+  $('#resetSentBtn').onclick=function(){
+    if(!confirm('Reset all Telegram sent badges?'))return;
+    api('/api/telegram/reset-sent',{method:'POST'})
+    .then(function(){load();})
+    .catch(function(e){alert(e.message);});
   };
 
   var SETTINGS_HTML='<h3>Settings</h3>'

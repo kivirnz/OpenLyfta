@@ -101,9 +101,19 @@ function apiRouter({ store, pipeliner, config }) {
       const last = store.getWorkouts({ limit: 1 })[0];
       if (!last) return res.status(404).json({ error: 'no workouts to test with' });
       if (!last.card_path) await pipeliner.generateForWorkoutId(last.id);
-      await pipeliner._sendWorkoutToTelegram(last.id, token, chatId, cap);
+      const full = store.getWorkout(last.id);
+      const { sendCard } = require('../telegram/bot');
+      const { setCount } = require('../lib/pipeline');
+      const pubUrl = store.setting('public_url') || '';
+      const shareUrl = pubUrl ? pubUrl.replace(/\/+$/, '') + '/share/' + last.id : '';
+      await sendCard({ botToken: token, chatId, cardPath: full.card_path, caption: cap, workout: full, totalSets: setCount(full), unit: store.setting('weight_unit') || 'kg', shareUrl });
       res.json({ ok: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  router.post('/telegram/reset-sent', (req, res) => {
+    store.resetTelegramSent();
+    res.json({ ok: true });
   });
 
   router.get('/caption-preview', (req, res) => {
