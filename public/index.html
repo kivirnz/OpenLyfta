@@ -5,9 +5,9 @@
 <style>
 :root{--bg:#111317;--card:#191c23;--line:#262a34;--muted:#8a8e9b;--acc:#EB445A;--ok:#3ddc84;--err:#ff6b6b;--t:#e9eaef}
 *{box-sizing:border-box}body{margin:0;font-family:'Google Sans',system-ui,sans-serif;background:var(--bg);color:var(--t)}
-header{padding:.8rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
-.header-left{display:flex;align-items:center;gap:.7rem}
-.header-logo{height:78.6px;width:78.6px}
+header{padding:0;display:flex;align-items:stretch;justify-content:space-between;border-bottom:1px solid var(--line)}
+.header-left{display:flex;align-items:stretch}
+.header-logo{height:auto;width:auto;min-height:100%;object-fit:contain;display:block}
 .wrap{max-width:1100px;margin:0 auto;padding:1.5rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:1rem}
 .workout{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
@@ -49,7 +49,7 @@ input,textarea{width:100%;padding:.6rem;border-radius:9px;border:1px solid var(-
 </style>
 <header>
 <div class="header-left"><img class="header-logo" src="/stickfigure.png" alt="OpenLyfta"></div>
-<div style="display:flex;gap:.6rem;align-items:center">
+<div style="display:flex;gap:.6rem;align-items:center;padding:.7rem 1.5rem">
 <button class="btn" id="settingsBtn">⚙ Settings</button>
 <button class="btn" id="syncBtn">↻ Sync now</button>
 <a class="btn" href="/logout" style="text-decoration:none">Sign out</a>
